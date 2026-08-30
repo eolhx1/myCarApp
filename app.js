@@ -1,0 +1,117 @@
+// ERSÄTT DENNA MED DIN UTMATADE URL FRÅN GOOGLE APPS SCRIPT
+const API_URL = "https://script.google.com/macros/s/DIN_SKRIPT_ID_HÄR/exec";
+
+// Sätt dagens datum som standard i formuläret
+document.getElementById('datum').valueAsDate = new Date();
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+  document.getElementById(tabId).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  if (tabId === 'dashboard') {
+    loadDashboardData();
+  }
+}
+
+function toggleFuelInput() {
+  const kategori = document.getElementById('kategori').value;
+  const literGroup = document.getElementById('liter-group');
+  literGroup.style.display = (kategori === 'Drivmedel') ? 'block' : 'none';
+}
+
+// Skicka data till Google Sheets
+document.getElementById('car-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const submitBtn = document.getElementById('submit-btn');
+  submitBtn.disabled = true;
+  submitBtn.innerText = "Sparar...";
+
+  const payload = {
+    datum: document.getElementById('datum').value,
+    matarstallning: document.getElementById('matarstallning').value,
+    kategori: document.getElementById('kategori').value,
+    belopp: document.getElementById('belopp').value,
+    liter: document.getElementById('liter').value,
+    anteckning: document.getElementById('anteckning').value
+  };
+
+  try {
+    // google apps script post kräver text/plain eller no-cors bypass ibland via fetch
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    alert("Data sparades!");
+    document.getElementById('car-form').reset();
+    document.getElementById('datum').valueAsDate = new Date();
+    switchTab('dashboard');
+  } catch (error) {
+    console.error("Fel vid sparning:", error);
+    alert("Kunde inte spara data.");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerText = "Spara händelse";
+  }
+});
+
+// Hämta data till Dashboard
+async function loadDashboardData() {
+  try {
+    const response = await fetch(API_URL);
+    const result = await response.json();
+    
+    if (result.status === "success") {
+      renderDashboard(result.data);
+    }
+  } catch (error) {
+    console.error("Fel vid hämtning:", error);
+  }
+}
+
+function renderDashboard(data) {
+  if (!data || data.length === 0) return;
+
+  // Beräkna total kostnad
+  const totalCost = data.reduce((sum, item) => sum + (Number(item.belopp) || 0), 0);
+  document.getElementById('total-cost').innerText = `${totalCost.toLocaleString('sv-SE')} kr`;
+
+  // Hitta senaste mätarställning
+  const maxOdo = Math.max(...data.map(item => Number(item.matarstallning) || 0));
+  document.getElementById('latest-odo').innerText = `${maxOdo.toLocaleString('sv-SE')} km`;
+
+  // Senaste tankning
+  const fuelEntries = data.filter(item => item.kategori === 'Drivmedel' && item.liter > 0);
+  if (fuelEntries.length > 0) {
+    const latestFuel = fuelEntries[fuelEntries.length - 1];
+    document.getElementById('latest-fuel').innerText = `${latestFuel.liter} L`;
+  }
+
+  // Senaste 5 händelser i listan
+  const historyList = document.getElementById('history-list');
+  historyList.innerHTML = '';
+  
+  data.slice(-5).reverse().forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'history-item';
+    li.innerHTML = `
+      <div>
+        <strong>${item.kategori}</strong> (${item.datum})<br>
+        <small>${item.matarstallning} km ${item.anteckning ? '- ' + item.anteckning : ''}</small>
+      </div>
+      <div>
+        <strong>${item.belopp} kr</strong>
+      </div>
+    `;
+    historyList.appendChild(li);
+  });
+}
+
+// Ladda dashboard vid start
+loadDashboardData();
