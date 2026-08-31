@@ -122,7 +122,7 @@ function renderDashboard(data) {
       li.classList.add('selected');
     }
 
-    li.onclick = () => selectHistoryItem(item, data);
+    li.onclick = () => selectHistoryItem(item);
     li.innerHTML = `
       <div>
         <strong>${item.kategori}</strong> (${item.datum})<br>
@@ -185,7 +185,7 @@ function updateCardsOverview(data) {
 }
 
 // Uppdatera rutorna när en specifik post klickas
-function selectHistoryItem(item, data) {
+function selectHistoryItem(item) {
   if (selectedItem === item) {
     clearSelection();
     return;
@@ -194,16 +194,19 @@ function selectHistoryItem(item, data) {
   selectedItem = item;
   document.getElementById('reset-selection-btn').style.display = 'inline-block';
 
-  updateCardsForSingleItem(item, data);
-  renderDashboard(data); // Rita om listan för att uppdatera markeringen
+  // Använd den globala variabeln currentDashboardData så att data alltid finns tillgänglig
+  updateCardsForSingleItem(item, currentDashboardData);
+  renderDashboard(currentDashboardData);
 }
 
 function updateCardsForSingleItem(item, data) {
+  // Säkerställ att data finns
+  const safeData = data || currentDashboardData || [];
+
   const belopp = parseNum(item.belopp);
   const matarstallning = parseNum(item.matarstallning);
   const liter = parseNum(item.liter);
 
-  // Sätt rubriker säkert
   const setTitle = (id, text) => {
     const el = document.getElementById(id);
     if (el) el.innerText = text;
@@ -220,7 +223,7 @@ function updateCardsForSingleItem(item, data) {
 
   // Beräkna förbrukning om det är en drivmedelspost
   if (item.kategori === 'Drivmedel' && liter > 0 && matarstallning > 0) {
-    const fuelEntries = data
+    const fuelEntries = safeData
       .map(entry => ({
         ...entry,
         matarstallningNum: parseNum(entry.matarstallning),
@@ -244,6 +247,7 @@ function updateCardsForSingleItem(item, data) {
         document.getElementById('fuel-consumption').innerText = `- L/mil`;
       }
     } else {
+      // Om det är den äldsta tankningen i listan finns ingen tidigare mätarställning att jämföra med
       document.getElementById('fuel-consumption').innerText = `- L/mil`;
     }
   } else {
