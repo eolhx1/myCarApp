@@ -1,19 +1,26 @@
-//
-// filename: app.json
-//
-
 // ERSÄTT DENNA MED DIN UTMATADE URL FRÅN GOOGLE APPS SCRIPT
 const API_URL = "https://script.google.com/macros/s/AKfycbyDKCp8dmzKSPXIbFnFVwBlTL8TxQimY5K7X1tWIHGa1tFktV2F1E0jataaoEb1ELRb/exec";
 
 // Sätt dagens datum som standard i formuläret
 document.getElementById('datum').valueAsDate = new Date();
 
-function switchTab(tabId) {
+function switchTab(tabId, evt) {
+  // Dölj alla flikar och ta bort active-klass från alla knappar
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
 
+  // Visa den valda fliken
   document.getElementById(tabId).classList.add('active');
-  event.currentTarget.classList.add('active');
+  
+  // Sätt active-klass på knappen om funktionen anropades via klick
+  if (evt && evt.currentTarget) {
+    evt.currentTarget.classList.add('active');
+  } else {
+    // Om anropad programmatiskt (t.ex. efter sparning), markera rätt knapp
+    const btnIndex = tabId === 'dashboard' ? 0 : 1;
+    const buttons = document.querySelectorAll('.tab-btn');
+    if (buttons[btnIndex]) buttons[btnIndex].classList.add('active');
+  }
 
   if (tabId === 'dashboard') {
     loadDashboardData();

@@ -1,23 +1,20 @@
 {
-"name": "Bilkoll - Kostnader & Bilvård",
-"short_name": "Bilkoll",
-"description": "Spåra och ha full kontroll över din bils kostnader och tankningar.",
-"start_url": "./index.html",
-"display": "standalone",
-"background_color": "#ffffff",
-"theme_color": "#2563eb",
-"orientation": "portrait",
-"icons": [
-{
-"src": "https://cdn-icons-png.flaticon.com/512/744/744465.png",
-"sizes": "192x192",
-"type": "image/png",
-"purpose": "any maskable"
-},
-{
-"src": "https://cdn-icons-png.flaticon.com/512/744/744465.png",
-"sizes": "512x512",
-"type": "image/png",
-"purpose": "any maskable"
+  "name": "Bilkoll",
+  "short_name": "Bilkoll",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
-]
