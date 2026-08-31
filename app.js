@@ -89,19 +89,41 @@ async function loadDashboardData() {
 function renderDashboard(data) {
   if (!data || data.length === 0) return;
 
-  // Beräkna total kostnad
+  // Totalkostnad
   const totalCost = data.reduce((sum, item) => sum + (Number(item.belopp) || 0), 0);
   document.getElementById('total-cost').innerText = `${totalCost.toLocaleString('sv-SE')} kr`;
 
-  // Hitta senaste mätarställning
+  // Mätarställning
   const maxOdo = Math.max(...data.map(item => Number(item.matarstallning) || 0));
   document.getElementById('latest-odo').innerText = `${maxOdo.toLocaleString('sv-SE')} km`;
 
-  // Senaste tankning
-  const fuelEntries = data.filter(item => item.kategori === 'Drivmedel' && item.liter > 0);
+  // Filtrera ut giltiga drivmedelsposter och sortera efter mätarställning/datum
+  const fuelEntries = data
+    .filter(item => item.kategori === 'Drivmedel' && Number(item.liter) > 0 && Number(item.matarstallning) > 0)
+    .sort((a, b) => Number(a.matarstallning) - Number(b.matarstallning));
+
   if (fuelEntries.length > 0) {
     const latestFuel = fuelEntries[fuelEntries.length - 1];
     document.getElementById('latest-fuel').innerText = `${latestFuel.liter} L`;
+
+    // Beräkna förbrukning (kräver minst två tankningar med mätarställning)
+    if (fuelEntries.length >= 2) {
+      const previousFuel = fuelEntries[fuelEntries.length - 2];
+      const kmDriven = Number(latestFuel.matarstallning) - Number(previousFuel.matarstallning);
+
+      if (kmDriven > 0) {
+        const milDriven = kmDriven / 10;
+        const consumption = (Number(latestFuel.liter) / milDriven).toFixed(2);
+        document.getElementById('fuel-consumption').innerText = `${consumption} L/mil`;
+      } else {
+        document.getElementById('fuel-consumption').innerText = `- L/mil`;
+      }
+    } else {
+      document.getElementById('fuel-consumption').innerText = `- L/mil`;
+    }
+  } else {
+    document.getElementById('latest-fuel').innerText = `0 L`;
+    document.getElementById('fuel-consumption').innerText = `- L/mil`;
   }
 
   // Senaste 5 händelser i listan
