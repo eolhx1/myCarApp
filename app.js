@@ -89,39 +89,49 @@ async function loadDashboardData() {
 function renderDashboard(data) {
   if (!data || data.length === 0) return;
 
-  // Totalkostnad
-  const totalCost = data.reduce((sum, item) => sum + (Number(item.belopp) || 0), 0);
-  document.getElementById('total-cost').innerText = `${totalCost.toLocaleString('sv-SE')} kr`;
+  // Helper för att säkert konvertera tal (hanterar både "36.99" och "36,99")
+  const parseNum = (val) => {
+    if (!val) return 0;
+    const str = String(val).replace(',', '.').replace(/\s/g, '');
+    return parseFloat(str) || 0;
+  };
 
-  // Mätarställning (Högsta registrerade)
-  const maxOdo = Math.max(...data.map(item => Number(item.matarstallning) || 0));
+  // Totalkostnad
+  const totalCost = data.reduce((sum, item) => sum + parseNum(item.belopp), 0);
+  document.getElementById('total-cost').innerText = `${totalCost.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr`;
+
+  // Högsta mätarställning
+  const maxOdo = Math.max(...data.map(item => parseNum(item.matarstallning)));
   document.getElementById('latest-odo').innerText = `${maxOdo.toLocaleString('sv-SE')} km`;
 
-  // Filtrera och konvertera värden till nummer
+  // Bearbeta drivmedelsposter
   const fuelEntries = data
     .map(item => ({
       ...item,
-      matarstallningNum: Number(item.matarstallning) || 0,
-      literNum: Number(item.liter) || 0,
-      datumObj: new Date(item.datum)
+      matarstallningNum: parseNum(item.matarstallning),
+      literNum: parseNum(item.liter),
+      beloppNum: parseNum(item.belopp)
     }))
     .filter(item => item.kategori === 'Drivmedel' && item.literNum > 0 && item.matarstallningNum > 0)
-    // Sortera kronologiskt baserat på datum och mätarställning
-    .sort((a, b) => a.datumObj - b.datumObj || a.matarstallningNum - b.matarstallningNum);
+    // Sortera efter mätarställning i stigande ordning (lägst till högst km)
+    .sort((a, b) => a.matarstallningNum - b.matarstallningNum);
 
   if (fuelEntries.length > 0) {
+    // Visa liter från den absolut senaste tankningen (kronologiskt/högst km)
     const latestFuel = fuelEntries[fuelEntries.length - 1];
     document.getElementById('latest-fuel').innerText = `${latestFuel.literNum} L`;
 
-    // Beräkna förbrukning om det finns minst 2 tankningar
+    // Förbrukning: jämför de två sista giltiga tankningarna i mätarordning
     if (fuelEntries.length >= 2) {
-      const previousFuel = fuelEntries[fuelEntries.length - 2];
-      const kmDriven = latestFuel.matarstallningNum - previousFuel.matarstallningNum;
+      const current = fuelEntries[fuelEntries.length - 1];
+      const previous = fuelEntries[fuelEntries.length - 2];
+
+      const kmDriven = current.matarstallningNum - previous.matarstallningNum;
 
       if (kmDriven > 0) {
         const milDriven = kmDriven / 10;
-        const consumption = (latestFuel.literNum / milDriven).toFixed(2);
-        document.getElementById('fuel-consumption').innerText = `${consumption} L/mil`;
+        const consumption = (current.literNum / milDriven).toFixed(2);
+        document.getElementById('fuel-consumption').innerText = `${consumption.replace('.', ',')} L/mil`;
       } else {
         document.getElementById('fuel-consumption').innerText = `- L/mil`;
       }
@@ -133,7 +143,7 @@ function renderDashboard(data) {
     document.getElementById('fuel-consumption').innerText = `- L/mil`;
   }
 
-  // Senaste 5 händelser i listan
+  // Senaste 5 händelser i listan (visas i den ordning de ligger i bladet, med den nyaste överst)
   const historyList = document.getElementById('history-list');
   historyList.innerHTML = '';
   
@@ -143,10 +153,10 @@ function renderDashboard(data) {
     li.innerHTML = `
       <div>
         <strong>${item.kategori}</strong> (${item.datum})<br>
-        <small>${item.matarstallning} km ${item.anteckning ? '- ' + item.anteckning : ''}</small>
+        <small>${parseNum(item.matarstallning)} km ${item.anteckning ? '- ' + item.anteckning : ''}</small>
       </div>
       <div>
-        <strong>${item.belopp} kr</strong>
+        <strong>${parseNum(item.belopp).toFixed(2).replace('.', ',')} kr</strong>
       </div>
     `;
     historyList.appendChild(li);
