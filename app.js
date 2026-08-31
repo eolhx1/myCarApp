@@ -203,11 +203,16 @@ function updateCardsForSingleItem(item, data) {
   const matarstallning = parseNum(item.matarstallning);
   const liter = parseNum(item.liter);
 
-  // Ändra rubrikerna tillfälligt för tydlighet
-  document.querySelector('.card:nth-child(1) h3').innerText = 'Kostnad';
-  document.querySelector('.card:nth-child(2) h3').innerText = 'Mätarställning';
-  document.querySelector('.card:nth-child(3) h3').innerText = 'Tankning';
-  document.querySelector('.card:nth-child(4) h3').innerText = 'Förbrukning';
+  // Sätt rubriker säkert
+  const setTitle = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = text;
+  };
+
+  setTitle('card-title-1', 'Kostnad');
+  setTitle('card-title-2', 'Mätarställning');
+  setTitle('card-title-3', 'Tankning');
+  setTitle('card-title-4', 'Förbrukning');
 
   document.getElementById('total-cost').innerText = `${belopp.toFixed(2).replace('.', ',')} kr`;
   document.getElementById('latest-odo').innerText = `${matarstallning.toLocaleString('sv-SE')} km`;
@@ -215,7 +220,6 @@ function updateCardsForSingleItem(item, data) {
 
   // Beräkna förbrukning om det är en drivmedelspost
   if (item.kategori === 'Drivmedel' && liter > 0 && matarstallning > 0) {
-    // Hämta och sortera alla drivmedelsposter kronologiskt
     const fuelEntries = data
       .map(entry => ({
         ...entry,
@@ -225,7 +229,6 @@ function updateCardsForSingleItem(item, data) {
       .filter(entry => entry.kategori === 'Drivmedel' && entry.literNum > 0 && entry.matarstallningNum > 0)
       .sort((a, b) => a.matarstallningNum - b.matarstallningNum);
 
-    // Hitta var i ordningen den valda tankningen ligger
     const currentIndex = fuelEntries.findIndex(e => e.matarstallningNum === matarstallning && e.datum === item.datum);
 
     if (currentIndex > 0) {
@@ -241,11 +244,28 @@ function updateCardsForSingleItem(item, data) {
         document.getElementById('fuel-consumption').innerText = `- L/mil`;
       }
     } else {
-      // Om det är den allra första tankningen saknas föregående mätarställning
       document.getElementById('fuel-consumption').innerText = `- L/mil`;
     }
   } else {
     document.getElementById('fuel-consumption').innerText = `-`;
+  }
+}
+
+function clearSelection() {
+  selectedItem = null;
+
+  const setTitle = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = text;
+  };
+
+  setTitle('card-title-1', 'Totalkostnad');
+  setTitle('card-title-2', 'Mätarställning');
+  setTitle('card-title-3', 'Senaste tankning');
+  setTitle('card-title-4', 'Förbrukning');
+
+  if (currentDashboardData.length > 0) {
+    renderDashboard(currentDashboardData);
   }
 }
 
