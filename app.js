@@ -186,7 +186,6 @@ function updateCardsOverview(data) {
 
 // Uppdatera rutorna när en specifik post klickas
 function selectHistoryItem(item, data) {
-  // Om man klickar på samma rad igen, avmarkera
   if (selectedItem === item) {
     clearSelection();
     return;
@@ -195,26 +194,71 @@ function selectHistoryItem(item, data) {
   selectedItem = item;
   document.getElementById('reset-selection-btn').style.display = 'inline-block';
 
-  updateCardsForSingleItem(item);
-  renderDashboard(data); // Rita om listan för att uppdatera 'selected'-klassen
+  updateCardsForSingleItem(item, data);
+  renderDashboard(data); // Rita om listan för att uppdatera markeringen
 }
 
-function updateCardsForSingleItem(item) {
+function updateCardsForSingleItem(item, data) {
   const belopp = parseNum(item.belopp);
   const matarstallning = parseNum(item.matarstallning);
   const liter = parseNum(item.liter);
 
+  // Ändra rubrikerna tillfälligt för tydlighet
+  document.querySelector('.card:nth-child(1) h3').innerText = 'Kostnad';
+  document.querySelector('.card:nth-child(2) h3').innerText = 'Mätarställning';
+  document.querySelector('.card:nth-child(3) h3').innerText = 'Tankning';
+  document.querySelector('.card:nth-child(4) h3').innerText = 'Förbrukning';
+
   document.getElementById('total-cost').innerText = `${belopp.toFixed(2).replace('.', ',')} kr`;
   document.getElementById('latest-odo').innerText = `${matarstallning.toLocaleString('sv-SE')} km`;
-  document.getElementById('latest-fuel').innerText = item.kategori === 'Drivmedel' && liter > 0 ? `${liter} L` : `- L`;
-  
-  // Om det finns en anteckning visar vi den under förbrukning när en enskild rad väljs
-  document.getElementById('fuel-consumption').innerText = item.anteckning || (item.kategori === 'Drivmedel' ? 'Drivmedel' : '-');
+  document.getElementById('latest-fuel').innerText = item.kategori === 'Drivmedel' && liter > 0 ? `${liter} L` : `-`;
+
+  // Beräkna förbrukning om det är en drivmedelspost
+  if (item.kategori === 'Drivmedel' && liter > 0 && matarstallning > 0) {
+    // Hämta och sortera alla drivmedelsposter kronologiskt
+    const fuelEntries = data
+      .map(entry => ({
+        ...entry,
+        matarstallningNum: parseNum(entry.matarstallning),
+        literNum: parseNum(entry.liter)
+      }))
+      .filter(entry => entry.kategori === 'Drivmedel' && entry.literNum > 0 && entry.matarstallningNum > 0)
+      .sort((a, b) => a.matarstallningNum - b.matarstallningNum);
+
+    // Hitta var i ordningen den valda tankningen ligger
+    const currentIndex = fuelEntries.findIndex(e => e.matarstallningNum === matarstallning && e.datum === item.datum);
+
+    if (currentIndex > 0) {
+      const current = fuelEntries[currentIndex];
+      const previous = fuelEntries[currentIndex - 1];
+      const kmDriven = current.matarstallningNum - previous.matarstallningNum;
+
+      if (kmDriven > 0) {
+        const milDriven = kmDriven / 10;
+        const consumption = (current.literNum / milDriven).toFixed(2);
+        document.getElementById('fuel-consumption').innerText = `${consumption.replace('.', ',')} L/mil`;
+      } else {
+        document.getElementById('fuel-consumption').innerText = `- L/mil`;
+      }
+    } else {
+      // Om det är den allra första tankningen saknas föregående mätarställning
+      document.getElementById('fuel-consumption').innerText = `- L/mil`;
+    }
+  } else {
+    document.getElementById('fuel-consumption').innerText = `-`;
+  }
 }
 
-// Nollställ och visa totalen igen
+// Uppdatera även clearSelection för att återställa rubrikerna
 function clearSelection() {
   selectedItem = null;
+  
+  // Återställ kortrubrikerna
+  document.querySelector('.card:nth-child(1) h3').innerText = 'Totalkostnad';
+  document.querySelector('.card:nth-child(2) h3').innerText = 'Mätarställning';
+  document.querySelector('.card:nth-child(3) h3').innerText = 'Senaste tankning';
+  document.querySelector('.card:nth-child(4) h3').innerText = 'Förbrukning';
+
   if (currentDashboardData.length > 0) {
     renderDashboard(currentDashboardData);
   }
