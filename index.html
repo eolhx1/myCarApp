@@ -40,9 +40,13 @@
 	  </div>
 	</div>
 
-      <h2>Senaste händelser</h2>
-      <ul id="history-list" class="history-list">
-        </ul>
+	<div class="section-header">
+	  <h2>Senaste händelser</h2>
+	  <button id="reset-selection-btn" class="btn-secondary" style="display: none;" onclick="clearSelection()">Visa totalt</button>
+	</div>
+	<ul id="history-list" class="history-list">
+	  <!-- Fylls i dynamiskt från JS -->
+</ul>
     </section>
 
     <section id="input" class="tab-content">
@@ -88,6 +92,8 @@
       </form>
     </section>
   </main>
+  
+  
 
   <script src="app.js"></script>
 </body>

@@ -86,15 +86,59 @@ async function loadDashboardData() {
   }
 }
 
+let currentDashboardData = [];
+let selectedItem = null;
+
+function parseNum(val) {
+  if (!val) return 0;
+  const str = String(val).replace(',', '.').replace(/\s/g, '');
+  return parseFloat(str) || 0;
+}
+
 function renderDashboard(data) {
   if (!data || data.length === 0) return;
 
-  // Helper för att säkert konvertera tal (hanterar både "36.99" och "36,99")
-  const parseNum = (val) => {
-    if (!val) return 0;
-    const str = String(val).replace(',', '.').replace(/\s/g, '');
-    return parseFloat(str) || 0;
-  };
+  currentDashboardData = data;
+
+  // Om användaren inte har valt en specifik post, visa totalläget
+  if (!selectedItem) {
+    updateCardsOverview(data);
+  } else {
+    updateCardsForSingleItem(selectedItem);
+  }
+
+  // Senaste händelser i listan
+  const historyList = document.getElementById('history-list');
+  historyList.innerHTML = '';
+
+  const reversedData = data.slice().reverse();
+
+  reversedData.slice(0, 10).forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'history-item';
+    
+    // Markera om denna är den valda posten
+    if (selectedItem === item) {
+      li.classList.add('selected');
+    }
+
+    li.onclick = () => selectHistoryItem(item, data);
+    li.innerHTML = `
+      <div>
+        <strong>${item.kategori}</strong> (${item.datum})<br>
+        <small>${parseNum(item.matarstallning)} km ${item.anteckning ? '- ' + item.anteckning : ''}</small>
+      </div>
+      <div>
+        <strong>${parseNum(item.belopp).toFixed(2).replace('.', ',')} kr</strong>
+      </div>
+    `;
+    historyList.appendChild(li);
+  });
+}
+
+// Uppdatera rutorna med totalöversikt
+function updateCardsOverview(data) {
+  document.getElementById('reset-selection-btn').style.display = 'none';
 
   // Totalkostnad
   const totalCost = data.reduce((sum, item) => sum + parseNum(item.belopp), 0);
@@ -104,7 +148,7 @@ function renderDashboard(data) {
   const maxOdo = Math.max(...data.map(item => parseNum(item.matarstallning)));
   document.getElementById('latest-odo').innerText = `${maxOdo.toLocaleString('sv-SE')} km`;
 
-  // Bearbeta drivmedelsposter
+  // Drivmedel & Förbrukning
   const fuelEntries = data
     .map(item => ({
       ...item,
@@ -113,19 +157,15 @@ function renderDashboard(data) {
       beloppNum: parseNum(item.belopp)
     }))
     .filter(item => item.kategori === 'Drivmedel' && item.literNum > 0 && item.matarstallningNum > 0)
-    // Sortera efter mätarställning i stigande ordning (lägst till högst km)
     .sort((a, b) => a.matarstallningNum - b.matarstallningNum);
 
   if (fuelEntries.length > 0) {
-    // Visa liter från den absolut senaste tankningen (kronologiskt/högst km)
     const latestFuel = fuelEntries[fuelEntries.length - 1];
     document.getElementById('latest-fuel').innerText = `${latestFuel.literNum} L`;
 
-    // Förbrukning: jämför de två sista giltiga tankningarna i mätarordning
     if (fuelEntries.length >= 2) {
       const current = fuelEntries[fuelEntries.length - 1];
       const previous = fuelEntries[fuelEntries.length - 2];
-
       const kmDriven = current.matarstallningNum - previous.matarstallningNum;
 
       if (kmDriven > 0) {
@@ -142,25 +182,42 @@ function renderDashboard(data) {
     document.getElementById('latest-fuel').innerText = `0 L`;
     document.getElementById('fuel-consumption').innerText = `- L/mil`;
   }
+}
 
-  // Senaste 5 händelser i listan (visas i den ordning de ligger i bladet, med den nyaste överst)
-  const historyList = document.getElementById('history-list');
-  historyList.innerHTML = '';
+// Uppdatera rutorna när en specifik post klickas
+function selectHistoryItem(item, data) {
+  // Om man klickar på samma rad igen, avmarkera
+  if (selectedItem === item) {
+    clearSelection();
+    return;
+  }
+
+  selectedItem = item;
+  document.getElementById('reset-selection-btn').style.display = 'inline-block';
+
+  updateCardsForSingleItem(item);
+  renderDashboard(data); // Rita om listan för att uppdatera 'selected'-klassen
+}
+
+function updateCardsForSingleItem(item) {
+  const belopp = parseNum(item.belopp);
+  const matarstallning = parseNum(item.matarstallning);
+  const liter = parseNum(item.liter);
+
+  document.getElementById('total-cost').innerText = `${belopp.toFixed(2).replace('.', ',')} kr`;
+  document.getElementById('latest-odo').innerText = `${matarstallning.toLocaleString('sv-SE')} km`;
+  document.getElementById('latest-fuel').innerText = item.kategori === 'Drivmedel' && liter > 0 ? `${liter} L` : `- L`;
   
-  data.slice(-5).reverse().forEach(item => {
-    const li = document.createElement('li');
-    li.className = 'history-item';
-    li.innerHTML = `
-      <div>
-        <strong>${item.kategori}</strong> (${item.datum})<br>
-        <small>${parseNum(item.matarstallning)} km ${item.anteckning ? '- ' + item.anteckning : ''}</small>
-      </div>
-      <div>
-        <strong>${parseNum(item.belopp).toFixed(2).replace('.', ',')} kr</strong>
-      </div>
-    `;
-    historyList.appendChild(li);
-  });
+  // Om det finns en anteckning visar vi den under förbrukning när en enskild rad väljs
+  document.getElementById('fuel-consumption').innerText = item.anteckning || (item.kategori === 'Drivmedel' ? 'Drivmedel' : '-');
+}
+
+// Nollställ och visa totalen igen
+function clearSelection() {
+  selectedItem = null;
+  if (currentDashboardData.length > 0) {
+    renderDashboard(currentDashboardData);
+  }
 }
 
 // Ladda dashboard vid start

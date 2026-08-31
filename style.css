@@ -142,3 +142,43 @@ body {
   font-weight: bold;
   cursor: pointer;
 }
+
+/* Stilmall för vald rad i listan */
+.history-item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 4px solid transparent;
+}
+
+.history-item:hover {
+  background-color: #f1f5f9;
+}
+
+.history-item.selected {
+  background-color: #eff6ff;
+  border-left: 4px solid var(--primary-color);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.15);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #334155;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-secondary:hover {
+  background: #cbd5e1;
+}
