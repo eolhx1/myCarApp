@@ -30,8 +30,17 @@ function switchTab(tabId, evt) {
 function toggleFuelInput() {
   const kategori = document.getElementById('kategori').value;
   const literGroup = document.getElementById('liter-group');
-  literGroup.style.display = (kategori === 'Drivmedel') ? 'block' : 'none';
+  const literInput = document.getElementById('liter');
+
+  const isFuel = (kategori === 'Drivmedel');
+  literGroup.style.display = isFuel ? 'block' : 'none';
+
+  // Töm liter-fältet om kategorin inte är Drivmedel
+  if (!isFuel && literInput) {
+    literInput.value = '';
+  }
 }
+
 
 // Skicka data till Google Sheets
 document.getElementById('car-form').addEventListener('submit', async (e) => {
