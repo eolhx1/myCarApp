@@ -96,44 +96,52 @@ function parseNum(val) {
 }
 
 function renderDashboard(data) {
-  if (!data || data.length === 0) return;
+	if (!data || data.length === 0) return;
 
-  currentDashboardData = data;
+	currentDashboardData = data;
 
-  // Om användaren inte har valt en specifik post, visa totalläget
-  if (!selectedItem) {
-    updateCardsOverview(data);
-  } else {
-    updateCardsForSingleItem(selectedItem);
-  }
+	// Om användaren inte har valt en specifik post, visa totalläget
+	if (!selectedItem) {
+		updateCardsOverview(data);
+	} else {
+		updateCardsForSingleItem(selectedItem);
+	}
 
-  // Senaste händelser i listan
-  const historyList = document.getElementById('history-list');
-  historyList.innerHTML = '';
+	// Senaste händelser i listan – sorterade så att nyast datum hamnar överst
+	const historyList = document.getElementById('history-list');
+	historyList.innerHTML = '';
 
-  const reversedData = data.slice().reverse();
+	// Kopia som sorteras fallande efter datum (och mätarställning vid samma datum)
+	const sortedData = [...data].sort((a, b) => {
+	  const dateA = new Date(a.datum || 0);
+	  const dateB = new Date(b.datum || 0);
+	  
+	  if (dateA - dateB !== 0) {
+		return dateB - dateA; // Fallande datum (nyast först)
+	  }
+	  return parseNum(b.matarstallning) - parseNum(a.matarstallning); // Fallande mätarställning
+	});
 
-  reversedData.slice(0, 10).forEach(item => {
-    const li = document.createElement('li');
-    li.className = 'history-item';
-    
-    // Markera om denna är den valda posten
-    if (selectedItem === item) {
-      li.classList.add('selected');
-    }
+	sortedData.slice(0, 10).forEach(item => {
+	  const li = document.createElement('li');
+	  li.className = 'history-item';
+	  
+	  if (selectedItem === item) {
+		li.classList.add('selected');
+	  }
 
-    li.onclick = () => selectHistoryItem(item);
-    li.innerHTML = `
-      <div>
-        <strong>${item.kategori}</strong> (${item.datum})<br>
-        <small>${parseNum(item.matarstallning)} km ${item.anteckning ? '- ' + item.anteckning : ''}</small>
-      </div>
-      <div>
-        <strong>${parseNum(item.belopp).toFixed(2).replace('.', ',')} kr</strong>
-      </div>
-    `;
-    historyList.appendChild(li);
-  });
+	  li.onclick = () => selectHistoryItem(item);
+	  li.innerHTML = `
+		<div>
+		  <strong>${item.kategori}</strong> (${item.datum})<br>
+		  <small>${parseNum(item.matarstallning)} km ${item.anteckning ? '- ' + item.anteckning : ''}</small>
+		</div>
+		<div>
+		  <strong>${parseNum(item.belopp).toFixed(2).replace('.', ',')} kr</strong>
+		</div>
+	  `;
+	  historyList.appendChild(li);
+	});
 }
 
 // Uppdatera rutorna med totalöversikt
