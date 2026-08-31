@@ -1,5 +1,9 @@
+//
+// filename: app.json
+//
+
 // ERSÄTT DENNA MED DIN UTMATADE URL FRÅN GOOGLE APPS SCRIPT
-const API_URL = "https://script.google.com/macros/s/DIN_SKRIPT_ID_HÄR/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyDKCp8dmzKSPXIbFnFVwBlTL8TxQimY5K7X1tWIHGa1tFktV2F1E0jataaoEb1ELRb/exec";
 
 // Sätt dagens datum som standard i formuläret
 document.getElementById('datum').valueAsDate = new Date();
