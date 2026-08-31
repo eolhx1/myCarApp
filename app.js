@@ -93,27 +93,34 @@ function renderDashboard(data) {
   const totalCost = data.reduce((sum, item) => sum + (Number(item.belopp) || 0), 0);
   document.getElementById('total-cost').innerText = `${totalCost.toLocaleString('sv-SE')} kr`;
 
-  // Mätarställning
+  // Mätarställning (Högsta registrerade)
   const maxOdo = Math.max(...data.map(item => Number(item.matarstallning) || 0));
   document.getElementById('latest-odo').innerText = `${maxOdo.toLocaleString('sv-SE')} km`;
 
-  // Filtrera ut giltiga drivmedelsposter och sortera efter mätarställning/datum
+  // Filtrera och konvertera värden till nummer
   const fuelEntries = data
-    .filter(item => item.kategori === 'Drivmedel' && Number(item.liter) > 0 && Number(item.matarstallning) > 0)
-    .sort((a, b) => Number(a.matarstallning) - Number(b.matarstallning));
+    .map(item => ({
+      ...item,
+      matarstallningNum: Number(item.matarstallning) || 0,
+      literNum: Number(item.liter) || 0,
+      datumObj: new Date(item.datum)
+    }))
+    .filter(item => item.kategori === 'Drivmedel' && item.literNum > 0 && item.matarstallningNum > 0)
+    // Sortera kronologiskt baserat på datum och mätarställning
+    .sort((a, b) => a.datumObj - b.datumObj || a.matarstallningNum - b.matarstallningNum);
 
   if (fuelEntries.length > 0) {
     const latestFuel = fuelEntries[fuelEntries.length - 1];
-    document.getElementById('latest-fuel').innerText = `${latestFuel.liter} L`;
+    document.getElementById('latest-fuel').innerText = `${latestFuel.literNum} L`;
 
-    // Beräkna förbrukning (kräver minst två tankningar med mätarställning)
+    // Beräkna förbrukning om det finns minst 2 tankningar
     if (fuelEntries.length >= 2) {
       const previousFuel = fuelEntries[fuelEntries.length - 2];
-      const kmDriven = Number(latestFuel.matarstallning) - Number(previousFuel.matarstallning);
+      const kmDriven = latestFuel.matarstallningNum - previousFuel.matarstallningNum;
 
       if (kmDriven > 0) {
         const milDriven = kmDriven / 10;
-        const consumption = (Number(latestFuel.liter) / milDriven).toFixed(2);
+        const consumption = (latestFuel.literNum / milDriven).toFixed(2);
         document.getElementById('fuel-consumption').innerText = `${consumption} L/mil`;
       } else {
         document.getElementById('fuel-consumption').innerText = `- L/mil`;
