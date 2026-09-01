@@ -402,9 +402,9 @@ function showToast(message, isError = false) {
 }
 
 // Formulärhantering för inmatning
-const carForm = document.getElementById('car-form');
-if (carForm) {
-  carForm.addEventListener('submit', async (e) => {
+const carFormElem = document.getElementById('car-form');
+if (carFormElem) {
+  carFormElem.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = true;
@@ -427,10 +427,9 @@ if (carForm) {
         body: JSON.stringify(payload)
       });
 
-      // Ersätt alert med showToast
       showToast("Händelsen har sparats!");
       
-      carForm.reset();
+      carFormElem.reset();
       document.getElementById('datum').valueAsDate = new Date();
       switchTab('dashboard');
       loadData();
