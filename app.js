@@ -355,11 +355,16 @@ function editItem(item) {
   document.getElementById('liter').value = item.liter || '';
   document.getElementById('anteckning').value = item.anteckning || '';
 
-  // Ändra knapptext och gå till fliken "Mata in"
+  // Ändra knapptext
   const submitBtn = document.getElementById('submit-btn');
   if (submitBtn) submitBtn.innerText = "Uppdatera händelse";
 
-  switchTab('inmatning');
+  // Välj knappen "Mata in" i navigeringen så att den blir blå/aktiv
+  const inputTabBtn = document.querySelectorAll('.tab-btn')[1];
+
+  // Byt till rätt flik (motsvarar <div id="tab-input">)
+  switchTab('input', { currentTarget: inputTabBtn });
+
   showToast("Ändra uppgifterna och klicka på 'Uppdatera händelse'");
 }
 
