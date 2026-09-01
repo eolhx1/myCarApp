@@ -339,18 +339,32 @@ const carForm = document.getElementById('car-form');
 if (carForm) {
   carForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    const datum = document.getElementById('datum').value;
+    const matarstallning = document.getElementById('matarstallning').value;
+    const kategori = document.getElementById('kategori').value;
+    const belopp = document.getElementById('belopp').value;
+    const liter = document.getElementById('liter').value;
+    const anteckning = document.getElementById('anteckning').value;
+
+    // Kontrollera om exakt samma händelse redan finns sparad
+    const isDuplicate = currentData.some(item => 
+      formatDate(item.datum) === datum &&
+      String(item.matarstallning) === String(matarstallning) &&
+      item.kategori === kategori &&
+      String(item.belopp) === String(belopp)
+    );
+
+    if (isDuplicate) {
+      showToast("Denna händelse finns redan registrerad!", true);
+      return; // Avbryt sparningen
+    }
+
     const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = true;
     submitBtn.innerText = "Sparar...";
 
-    const payload = {
-      datum: document.getElementById('datum').value,
-      matarstallning: document.getElementById('matarstallning').value,
-      kategori: document.getElementById('kategori').value,
-      belopp: document.getElementById('belopp').value,
-      liter: document.getElementById('liter').value,
-      anteckning: document.getElementById('anteckning').value
-    };
+    const payload = { datum, matarstallning, kategori, belopp, liter, anteckning };
 
     try {
       await fetch(API_URL, {
@@ -374,7 +388,6 @@ if (carForm) {
     }
   });
 }
-
 function showToast(message, isError = false) {
   const toast = document.getElementById('toast');
   if (!toast) return;
