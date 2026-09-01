@@ -258,6 +258,14 @@ function renderCharts(fuelData) {
   }
 }
 
+function toggleAccordion(index) {
+  const content = document.getElementById(`accordion-content-${index}`);
+  if (content) {
+    const isHidden = content.style.display === 'none' || content.style.display === '';
+    content.style.display = isHidden ? 'block' : 'none';
+  }
+}
+
 function renderAccordionList(calculatedFuelData) {
   const container = document.getElementById('history-accordion-list');
   if (!container) return;
@@ -286,9 +294,11 @@ function renderAccordionList(calculatedFuelData) {
 
     const card = document.createElement('div');
     card.className = 'history-card';
+    // Klickhändelse på hela kortet
+    card.onclick = () => toggleAccordion(index);
 
     card.innerHTML = `
-      <div onclick="toggleAccordion(${index})" class="history-card-header">
+      <div class="history-card-header">
         <div>
           <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
           <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
@@ -296,7 +306,7 @@ function renderAccordionList(calculatedFuelData) {
         <strong style="font-size: 1.05rem; color: var(--primary-color);">${totalCost.toFixed(2).replace('.', ',')} kr</strong>
       </div>
 
-      <div id="accordion-content-${index}" class="history-card-details">
+      <div id="accordion-content-${index}" class="history-card-details" style="display: none;">
         <div><strong>Mätarställning:</strong> ${matar.toLocaleString('sv-SE')} km</div>
         ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>` : ''}
         ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${amountInput.toFixed(2).replace('.', ',')} kr/L</div>` : ''}
@@ -307,12 +317,6 @@ function renderAccordionList(calculatedFuelData) {
 
     container.appendChild(card);
   });
-}
-function toggleAccordion(index) {
-  const content = document.getElementById(`accordion-content-${index}`);
-  if (content) {
-    content.style.display = content.style.display === 'none' ? 'block' : 'none';
-  }
 }
 
 // Formulärhantering för inmatning
