@@ -3,6 +3,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyDKCp8dmzKSPXIbFnFVwBl
 let currentData = [];
 let priceChartInstance = null;
 let consumptionChartInstance = null;
+let editingRowIndex = null; // Håller reda på om vi redigerar en rad
 
 document.addEventListener('DOMContentLoaded', () => {
   const datumInput = document.getElementById('datum');
@@ -43,7 +44,7 @@ function toggleFuelInput() {
   if (literGroup) literGroup.style.display = isFuel ? 'block' : 'none';
   if (!isFuel && literInput) literInput.value = '';
 
-  // Ändra etikett och placeholder dynamically
+  // Ändra etikett och placeholder dynamiskt
   if (beloppLabel && beloppInput) {
     if (isFuel) {
       beloppLabel.innerText = "Pris (kr/l)";
@@ -294,8 +295,6 @@ function renderAccordionList(calculatedFuelData) {
     const matar = parseNum(item.matarstallning);
     const liter = parseNum(item.liter);
     const formattedDate = formatDate(item.datum);
-
-    // Totalkostnad för raden
     const totalCost = isFuel ? (amountInput * liter) : amountInput;
 
     let consumptionText = '-';
@@ -311,12 +310,15 @@ function renderAccordionList(calculatedFuelData) {
     card.onclick = () => toggleAccordion(index);
 
     card.innerHTML = `
-      <div class="history-card-header">
+      <div class="history-card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
           <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
           <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
         </div>
-        <strong style="font-size: 1.05rem; color: var(--primary-color);">${totalCost.toFixed(2).replace('.', ',')} kr</strong>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <strong style="font-size: 1.05rem; color: var(--primary-color);">${totalCost.toFixed(2).replace('.', ',')} kr</strong>
+          <button type="button" class="edit-btn" title="Redigera" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px;">✏️</button>
+        </div>
       </div>
 
       <div id="accordion-content-${index}" class="history-card-details" style="display: none;">
@@ -328,8 +330,37 @@ function renderAccordionList(calculatedFuelData) {
       </div>
     `;
 
+    // Koppla klick på penn-ikonen till redigeringsfunktionen
+    const editBtn = card.querySelector('.edit-btn');
+    editBtn.onclick = (e) => {
+      e.stopPropagation(); // Förhindra att fällas ut/in när man klickar på pennan
+      editItem(item);
+    };
+
     container.appendChild(card);
   });
+}
+
+// Funktion för att fylla formuläret med befintliga uppgifter
+function editItem(item) {
+  editingRowIndex = item.rowIndex || null; // Spara radnummer från Sheets (om det finns)
+
+  document.getElementById('datum').value = formatDate(item.datum);
+  document.getElementById('matarstallning').value = item.matarstallning;
+  document.getElementById('kategori').value = item.kategori;
+  
+  toggleFuelInput(); // Anpassa fälten (Pris kr/L vs Belopp kr)
+
+  document.getElementById('belopp').value = item.belopp;
+  document.getElementById('liter').value = item.liter || '';
+  document.getElementById('anteckning').value = item.anteckning || '';
+
+  // Ändra knapptext och gå till fliken "Mata in"
+  const submitBtn = document.getElementById('submit-btn');
+  if (submitBtn) submitBtn.innerText = "Uppdatera händelse";
+
+  switchTab('inmatning');
+  showToast("Ändra uppgifterna och klicka på 'Uppdatera händelse'");
 }
 
 // ----------------------------------------------------
@@ -347,24 +378,30 @@ if (carForm) {
     const liter = document.getElementById('liter').value;
     const anteckning = document.getElementById('anteckning').value;
 
-    // Kontrollera om exakt samma händelse redan finns sparad
-    const isDuplicate = currentData.some(item => 
-      formatDate(item.datum) === datum &&
-      String(item.matarstallning) === String(matarstallning) &&
-      item.kategori === kategori &&
-      String(item.belopp) === String(belopp)
-    );
+    // Om det inte är en redigering, kontrollera dubbletter
+    if (!editingRowIndex) {
+      const isDuplicate = currentData.some(item => 
+        formatDate(item.datum) === datum &&
+        String(item.matarstallning) === String(matarstallning) &&
+        item.kategori === kategori &&
+        String(item.belopp) === String(belopp)
+      );
 
-    if (isDuplicate) {
-      showToast("Denna händelse finns redan registrerad!", true);
-      return; // Avbryt sparningen
+      if (isDuplicate) {
+        showToast("Denna händelse finns redan registrerad!", true);
+        return;
+      }
     }
 
     const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = true;
-    submitBtn.innerText = "Sparar...";
+    submitBtn.innerText = editingRowIndex ? "Uppdaterar..." : "Sparar...";
 
-    const payload = { datum, matarstallning, kategori, belopp, liter, anteckning };
+    const payload = { 
+      action: editingRowIndex ? "UPDATE" : "CREATE",
+      rowIndex: editingRowIndex,
+      datum, matarstallning, kategori, belopp, liter, anteckning 
+    };
 
     try {
       await fetch(API_URL, {
@@ -374,9 +411,14 @@ if (carForm) {
         body: JSON.stringify(payload)
       });
 
-      showToast("Händelsen har sparats!");
+      showToast(editingRowIndex ? "Händelsen har uppdaterats!" : "Händelsen har sparats!");
+      
+      // Återställ formulär & status
+      editingRowIndex = null;
       carForm.reset();
       document.getElementById('datum').valueAsDate = new Date();
+      submitBtn.innerText = "Spara händelse";
+
       switchTab('dashboard');
       loadData();
     } catch (error) {
@@ -384,10 +426,10 @@ if (carForm) {
       showToast("Kunde inte spara data.", true);
     } finally {
       submitBtn.disabled = false;
-      submitBtn.innerText = "Spara händelse";
     }
   });
 }
+
 function showToast(message, isError = false) {
   const toast = document.getElementById('toast');
   if (!toast) return;
