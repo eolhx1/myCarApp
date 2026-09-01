@@ -285,32 +285,29 @@ function renderAccordionList(calculatedFuelData) {
     }
 
     const card = document.createElement('div');
-    card.className = 'card';
-    card.style.marginBottom = '10px';
-    card.style.cursor = 'pointer';
+    card.className = 'history-card';
 
     card.innerHTML = `
-      <div onclick="toggleAccordion(${index})" style="display: flex; justify-content: space-between; align-items: center;">
+      <div onclick="toggleAccordion(${index})" class="history-card-header">
         <div>
-          <strong>${item.kategori}</strong>
-          <span style="font-size: 0.85em; color: #666; margin-left: 6px;">(${formattedDate})</span>
+          <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
+          <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
         </div>
-        <strong>${totalCost.toFixed(2).replace('.', ',')} kr</strong>
+        <strong style="font-size: 1.05rem; color: var(--primary-color);">${totalCost.toFixed(2).replace('.', ',')} kr</strong>
       </div>
 
-      <div id="accordion-content-${index}" style="display: none; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #ddd; font-size: 0.9em; color: #333;">
+      <div id="accordion-content-${index}" class="history-card-details">
         <div><strong>Mätarställning:</strong> ${matar.toLocaleString('sv-SE')} km</div>
         ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>` : ''}
         ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${amountInput.toFixed(2).replace('.', ',')} kr/L</div>` : ''}
         ${isFuel ? `<div><strong>Förbrukning:</strong> ${consumptionText}</div>` : ''}
-        ${item.anteckning ? `<div style="margin-top: 4px;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>` : ''}
+        ${item.anteckning ? `<div style="margin-top: 4px; color: #64748b;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>` : ''}
       </div>
     `;
 
     container.appendChild(card);
   });
 }
-
 function toggleAccordion(index) {
   const content = document.getElementById(`accordion-content-${index}`);
   if (content) {

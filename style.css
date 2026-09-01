@@ -182,3 +182,35 @@ body {
 .btn-secondary:hover {
   background: #cbd5e1;
 }
+
+/* Kort och styling för händelser i historik-accordion */
+.history-card {
+  background: var(--card-bg);
+  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.history-card:hover {
+  background-color: #f1f5f9;
+}
+
+.history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-card-details {
+  display: none;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #cbd5e1;
+  font-size: 0.9rem;
+  color: #334155;
+  line-height: 1.5;
+}
