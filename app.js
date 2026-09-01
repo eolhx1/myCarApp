@@ -35,10 +35,24 @@ function toggleFuelInput() {
   const kategori = document.getElementById('kategori').value;
   const literGroup = document.getElementById('liter-group');
   const literInput = document.getElementById('liter');
+  const beloppLabel = document.getElementById('belopp-label');
+  const beloppInput = document.getElementById('belopp');
 
   const isFuel = (kategori === 'Drivmedel');
+  
   if (literGroup) literGroup.style.display = isFuel ? 'block' : 'none';
   if (!isFuel && literInput) literInput.value = '';
+
+  // Ändra etikett och placeholder dynamically
+  if (beloppLabel && beloppInput) {
+    if (isFuel) {
+      beloppLabel.innerText = "Pris (kr/l)";
+      beloppInput.placeholder = "t.ex. 16.99";
+    } else {
+      beloppLabel.innerText = "Belopp (kr)";
+      beloppInput.placeholder = "t.ex. 850.00";
+    }
+  }
 }
 
 function parseNum(val) {
