@@ -119,7 +119,10 @@
   </div>
 </main>
   
-  <div id="toast" class="toast">Data sparades!</div>
+<div style="display: flex; gap: 10px; margin-top: 15px;">
+  <button type="submit" id="submit-btn" class="btn-primary" style="flex: 1;">Spara händelse</button>
+  <button type="button" id="cancel-btn" class="btn-secondary" onclick="resetForm()" style="display: none; flex: 1; background-color: #64748b; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;">Avbryt</button>
+</div>
 
   <script src="app.js"></script>
 </body>
