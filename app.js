@@ -341,28 +341,50 @@ function renderAccordionList(calculatedFuelData) {
   });
 }
 
-// Funktion för att fylla formuläret med befintliga uppgifter
+// Återställer formuläret till nyregistrering
+function resetForm() {
+  editingRowIndex = null;
+  const carForm = document.getElementById('car-form');
+  if (carForm) carForm.reset();
+
+  const datumInput = document.getElementById('datum');
+  if (datumInput) datumInput.valueAsDate = new Date();
+
+  toggleFuelInput();
+
+  const submitBtn = document.getElementById('submit-btn');
+  if (submitBtn) submitBtn.innerText = "Spara händelse";
+
+  const cancelBtn = document.getElementById('cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+
+  // Gå tillbaka till historiken
+  const historyBtn = document.querySelectorAll('.tab-btn')[2];
+  switchTab('history', { currentTarget: historyBtn });
+}
+
+// Uppdaterad editItem (visar Avbryt-knappen när man redigerar)
 function editItem(item) {
-  editingRowIndex = item.rowIndex || null; // Spara radnummer från Sheets (om det finns)
+  editingRowIndex = item.rowIndex || null;
 
   document.getElementById('datum').value = formatDate(item.datum);
   document.getElementById('matarstallning').value = item.matarstallning;
   document.getElementById('kategori').value = item.kategori;
   
-  toggleFuelInput(); // Anpassa fälten (Pris kr/L vs Belopp kr)
+  toggleFuelInput();
 
   document.getElementById('belopp').value = item.belopp;
   document.getElementById('liter').value = item.liter || '';
   document.getElementById('anteckning').value = item.anteckning || '';
 
-  // Ändra knapptext
   const submitBtn = document.getElementById('submit-btn');
   if (submitBtn) submitBtn.innerText = "Uppdatera händelse";
 
-  // Välj knappen "Mata in" i navigeringen så att den blir blå/aktiv
-  const inputTabBtn = document.querySelectorAll('.tab-btn')[1];
+  // Visa avbryt-knappen
+  const cancelBtn = document.getElementById('cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = 'block';
 
-  // Byt till rätt flik (motsvarar <div id="tab-input">)
+  const inputTabBtn = document.querySelectorAll('.tab-btn')[1];
   switchTab('input', { currentTarget: inputTabBtn });
 
   showToast("Ändra uppgifterna och klicka på 'Uppdatera händelse'");
@@ -417,14 +439,8 @@ if (carForm) {
       });
 
       showToast(editingRowIndex ? "Händelsen har uppdaterats!" : "Händelsen har sparats!");
-      
-      // Återställ formulär & status
-      editingRowIndex = null;
-      carForm.reset();
-      document.getElementById('datum').valueAsDate = new Date();
-      submitBtn.innerText = "Spara händelse";
 
-      switchTab('dashboard');
+      resetForm();
       loadData();
     } catch (error) {
       console.error("Fel vid sparning:", error);
