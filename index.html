@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2563eb">
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
 </head>
 <body>
 
@@ -14,90 +17,59 @@
     <h1>🚗 Bilkoll</h1>
   </header>
 
+<!-- Navigationsmeny -->
 <nav class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('dashboard', event)">Dashboard</button>
   <button class="tab-btn" onclick="switchTab('input', event)">Mata in</button>
+  <button class="tab-btn" onclick="switchTab('history', event)">Historik</button>
 </nav>
 
-  <main class="container">
-    <section id="dashboard" class="tab-content active">
-    <div class="stats-grid">
-		<div class="card">
-		  <h3 id="card-title-1">Totalkostnad</h3>
-		  <div id="total-cost" class="card-value">0 kr</div>
-		</div>
+<main class="container">
+  <!-- FLIK 1: DASHBOARD -->
+  <div id="tab-dashboard" class="tab-content active">
+    <!-- Dina 4 summeringskort -->
+    <div class="cards-grid">
+      <div class="card">
+        <h3 id="card-title-1">Totalkostnad</h3>
+        <div id="total-cost" class="card-value">0 kr</div>
+      </div>
+      <div class="card">
+        <h3 id="card-title-2">Mätarställning</h3>
+        <div id="latest-odo" class="card-value">0 km</div>
+      </div>
+      <div class="card">
+        <h3 id="card-title-3">Senaste tankning</h3>
+        <div id="latest-fuel" class="card-value">0 L</div>
+      </div>
+      <div class="card">
+        <h3 id="card-title-4">Förbrukning</h3>
+        <div id="fuel-consumption" class="card-value">- L/mil</div>
+      </div>
+    </div>
 
-		<div class="card">
-		  <h3 id="card-title-2">Mätarställning</h3>
-		  <div id="latest-odo" class="card-value">0 km</div>
-		</div>
+    <!-- Diagram för drivmedelspris -->
+    <div class="card" style="margin-top: 20px; padding: 15px;">
+      <h3>Drivmedelspris över tid</h3>
+      <div style="position: relative; height: 220px; width: 100%;">
+        <canvas id="priceChart"></canvas>
+      </div>
+    </div>
+  </div>
 
-		<div class="card">
-		  <h3 id="card-title-3">Senaste tankning</h3>
-		  <div id="latest-fuel" class="card-value">0 L</div>
-		</div>
+  <!-- FLIK 2: MATA IN -->
+  <div id="tab-input" class="tab-content" style="display: none;">
+    <!-- Ditt befintliga inmatningsformulär -->
+  </div>
 
-		<div class="card">
-		  <h3 id="card-title-4">Förbrukning</h3>
-		  <div id="fuel-consumption" class="card-value">- L/mil</div>
-		</div>
-	</div>
-
-	<div class="section-header">
-	  <h2>Senaste händelser</h2>
-	  <button id="reset-selection-btn" class="btn-secondary" style="display: none;" onclick="clearSelection()">Visa totalt</button>
-	</div>
-	<ul id="history-list" class="history-list">
-	  <!-- Fylls i dynamiskt från JS -->
-</ul>
-    </section>
-
-    <section id="input" class="tab-content">
-      <form id="car-form" class="card-form">
-        <div class="form-group">
-          <label for="datum">Datum</label>
-          <input type="date" id="datum" required>
-        </div>
-
-        <div class="form-group">
-          <label for="matarstallning">Mätarställning (km)</label>
-          <input type="number" id="matarstallning" placeholder="t.ex. 145000" required>
-        </div>
-
-        <div class="form-group">
-<label for="kategori">Kategori</label>
-<select id="kategori" name="kategori" required onchange="toggleFuelInput()">
-  <option value="Drivmedel">Drivmedel</option>
-  <option value="Service">Service</option>
-  <option value="Reparation">Reparation</option>
-  <option value="Försäkring">Försäkring</option>
-  <option value="Skatt">Skatt</option>
-  <option value="Bilvård">Bilvård</option>
-  <option value="Bildelar">Bildelar</option>
-  <option value="Övrigt">Övrigt</option>
-</select>
-
-        </div>
-
-        <div class="form-group">
-          <label for="belopp">Belopp (kr)</label>
-          <input type="number" id="belopp" step="0.01" placeholder="0.00" required>
-        </div>
-
-        <div class="form-group" id="liter-group">
-          <label for="liter">Antal liter (endast drivmedel)</label>
-          <input type="number" id="liter" step="0.01" placeholder="0.00">
-        </div>
-
-        <div class="form-group">
-          <label for="anteckning">Anteckning</label>
-          <input type="text" id="anteckning" placeholder="Valfri notering">
-        </div>
-
-        <button type="submit" id="submit-btn" class="btn-primary">Spara händelse</button>
-      </form>
-    </section>
-  </main>
+  <!-- FLIK 3: HISTORIK -->
+  <div id="tab-history" class="tab-content" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h2>Händelsehistorik</h2>
+      <button id="reset-selection-btn" style="display: none;" onclick="clearSelection()">Visa totalt</button>
+    </div>
+    <ul id="history-list" class="history-list"></ul>
+  </div>
+</main>
   
   
 

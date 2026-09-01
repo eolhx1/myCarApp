@@ -1,29 +1,39 @@
 // ERSÄTT DENNA MED DIN UTMATADE URL FRÅN GOOGLE APPS SCRIPT
 const API_URL = "https://script.google.com/macros/s/AKfycbyDKCp8dmzKSPXIbFnFVwBlTL8TxQimY5K7X1tWIHGa1tFktV2F1E0jataaoEb1ELRb/exec";
 
-// Sätt dagens datum som standard i formuläret
-document.getElementById('datum').valueAsDate = new Date();
+let priceChartInstance = null;
+let currentDashboardData = [];
+let selectedItem = null;
 
-function switchTab(tabId, evt) {
-  // Dölj alla flikar och ta bort active-klass från alla knappar
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+// Sätt dagens datum som standard i formuläret när sidan laddats
+document.addEventListener('DOMContentLoaded', () => {
+  const datumInput = document.getElementById('datum');
+  if (datumInput) datumInput.valueAsDate = new Date();
+});
 
-  // Visa den valda fliken
-  document.getElementById(tabId).classList.add('active');
-  
-  // Sätt active-klass på knappen om funktionen anropades via klick
-  if (evt && evt.currentTarget) {
-    evt.currentTarget.classList.add('active');
-  } else {
-    // Om anropad programmatiskt (t.ex. efter sparning), markera rätt knapp
-    const btnIndex = tabId === 'dashboard' ? 0 : 1;
-    const buttons = document.querySelectorAll('.tab-btn');
-    if (buttons[btnIndex]) buttons[btnIndex].classList.add('active');
+function switchTab(tabName, event) {
+  // 1. Dölj alla flikinnehåll
+  const tabs = document.querySelectorAll('.tab-content');
+  tabs.forEach(tab => tab.style.display = 'none');
+
+  // 2. Ta bort active-klassen från alla knappar
+  const buttons = document.querySelectorAll('.tab-btn');
+  buttons.forEach(btn => btn.classList.remove('active'));
+
+  // 3. Visa den valda fliken
+  const activeTab = document.getElementById(`tab-${tabName}`);
+  if (activeTab) {
+    activeTab.style.display = 'block';
   }
 
-  if (tabId === 'dashboard') {
-    loadDashboardData();
+  // 4. Markera den klickade knappen som aktiv
+  if (event && event.currentTarget) {
+    event.currentTarget.classList.add('active');
+  }
+
+  // Om användaren går till Dashboard, se till att diagrammet ritas om rätt i storlek
+  if (tabName === 'dashboard' && priceChartInstance) {
+    priceChartInstance.resize();
   }
 }
 
@@ -33,7 +43,7 @@ function toggleFuelInput() {
   const literInput = document.getElementById('liter');
 
   const isFuel = (kategori === 'Drivmedel');
-  literGroup.style.display = isFuel ? 'block' : 'none';
+  if (literGroup) literGroup.style.display = isFuel ? 'block' : 'none';
 
   // Töm liter-fältet om kategorin inte är Drivmedel
   if (!isFuel && literInput) {
@@ -41,47 +51,49 @@ function toggleFuelInput() {
   }
 }
 
-
 // Skicka data till Google Sheets
-document.getElementById('car-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const submitBtn = document.getElementById('submit-btn');
-  submitBtn.disabled = true;
-  submitBtn.innerText = "Sparar...";
+const carForm = document.getElementById('car-form');
+if (carForm) {
+  carForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Sparar...";
 
-  const payload = {
-    datum: document.getElementById('datum').value,
-    matarstallning: document.getElementById('matarstallning').value,
-    kategori: document.getElementById('kategori').value,
-    belopp: document.getElementById('belopp').value,
-    liter: document.getElementById('liter').value,
-    anteckning: document.getElementById('anteckning').value
-  };
+    const payload = {
+      datum: document.getElementById('datum').value,
+      matarstallning: document.getElementById('matarstallning').value,
+      kategori: document.getElementById('kategori').value,
+      belopp: document.getElementById('belopp').value,
+      liter: document.getElementById('liter').value,
+      anteckning: document.getElementById('anteckning').value
+    };
 
-  try {
-    // google apps script post kräver text/plain eller no-cors bypass ibland via fetch
-    await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-    alert("Data sparades!");
-    document.getElementById('car-form').reset();
-    document.getElementById('datum').valueAsDate = new Date();
-    switchTab('dashboard');
-  } catch (error) {
-    console.error("Fel vid sparning:", error);
-    alert("Kunde inte spara data.");
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerText = "Spara händelse";
-  }
-});
+      alert("Data sparades!");
+      carForm.reset();
+      document.getElementById('datum').valueAsDate = new Date();
+      switchTab('dashboard');
+      loadDashboardData(); // Ladda om datan direkt efter sparning
+    } catch (error) {
+      console.error("Fel vid sparning:", error);
+      alert("Kunde inte spara data.");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerText = "Spara händelse";
+    }
+  });
+}
 
-// Hämta data till Dashboard
+// Hämta data från Google Sheets
 async function loadDashboardData() {
   try {
     const response = await fetch(API_URL);
@@ -95,9 +107,6 @@ async function loadDashboardData() {
   }
 }
 
-let currentDashboardData = [];
-let selectedItem = null;
-
 function parseNum(val) {
   if (!val) return 0;
   const str = String(val).replace(',', '.').replace(/\s/g, '');
@@ -105,57 +114,57 @@ function parseNum(val) {
 }
 
 function renderDashboard(data) {
-	if (!data || data.length === 0) return;
+  if (!data || data.length === 0) return;
+  
+  const safeData = data || currentDashboardData || [];
+  currentDashboardData = data;
 
-	currentDashboardData = data;
+  // Uppdatera summeringskorten (totalläge eller vald post)
+  if (!selectedItem) {
+    updateCardsOverview(data);
+  } else {
+    updateCardsForSingleItem(selectedItem, data);
+  }
 
-	// Om användaren inte har valt en specifik post, visa totalläget
-	if (!selectedItem) {
-		updateCardsOverview(data);
-	} else {
-		updateCardsForSingleItem(selectedItem);
-	}
+  // Generera historiklistan i Historik-fliken
+  const historyList = document.getElementById('history-list');
+  if (historyList) {
+    historyList.innerHTML = '';
 
-	// Senaste händelser i listan – sorterade så att nyast datum hamnar överst
-	const historyList = document.getElementById('history-list');
-	historyList.innerHTML = '';
+    const sortedData = [...safeData].sort((a, b) => {
+      const dateA = new Date(a.datum || 0);
+      const dateB = new Date(b.datum || 0);
+      if (dateA - dateB !== 0) return dateB - dateA;
+      return parseNum(b.matarstallning) - parseNum(a.matarstallning);
+    });
 
-	// Kopia som sorteras fallande efter datum (och mätarställning vid samma datum)
-	const sortedData = [...data].sort((a, b) => {
-	  const dateA = new Date(a.datum || 0);
-	  const dateB = new Date(b.datum || 0);
-	  
-	  if (dateA - dateB !== 0) {
-		return dateB - dateA; // Fallande datum (nyast först)
-	  }
-	  return parseNum(b.matarstallning) - parseNum(a.matarstallning); // Fallande mätarställning
-	});
+    sortedData.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'history-item';
+      if (selectedItem === item) li.classList.add('selected');
 
-	sortedData.slice(0, 10).forEach(item => {
-	  const li = document.createElement('li');
-	  li.className = 'history-item';
-	  
-	  if (selectedItem === item) {
-		li.classList.add('selected');
-	  }
+      li.onclick = () => selectHistoryItem(item);
+      li.innerHTML = `
+        <div>
+          <strong>${item.kategori}</strong> (${item.datum})<br>
+          <small>${parseNum(item.matarstallning)} km ${item.anteckning ? '- ' + item.anteckning : ''}</small>
+        </div>
+        <div>
+          <strong>${parseNum(item.belopp).toFixed(2).replace('.', ',')} kr</strong>
+        </div>
+      `;
+      historyList.appendChild(li);
+    });
+  }
 
-	  li.onclick = () => selectHistoryItem(item);
-	  li.innerHTML = `
-		<div>
-		  <strong>${item.kategori}</strong> (${item.datum})<br>
-		  <small>${parseNum(item.matarstallning)} km ${item.anteckning ? '- ' + item.anteckning : ''}</small>
-		</div>
-		<div>
-		  <strong>${parseNum(item.belopp).toFixed(2).replace('.', ',')} kr</strong>
-		</div>
-	  `;
-	  historyList.appendChild(li);
-	});
+  // Rita drivmedelsdiagrammet på Dashboard
+  renderPriceChart(safeData);
 }
 
 // Uppdatera rutorna med totalöversikt
 function updateCardsOverview(data) {
-  document.getElementById('reset-selection-btn').style.display = 'none';
+  const resetBtn = document.getElementById('reset-selection-btn');
+  if (resetBtn) resetBtn.style.display = 'none';
 
   // Totalkostnad
   const totalCost = data.reduce((sum, item) => sum + parseNum(item.belopp), 0);
@@ -209,15 +218,14 @@ function selectHistoryItem(item) {
   }
 
   selectedItem = item;
-  document.getElementById('reset-selection-btn').style.display = 'inline-block';
+  const resetBtn = document.getElementById('reset-selection-btn');
+  if (resetBtn) resetBtn.style.display = 'inline-block';
 
-  // Använd den globala variabeln currentDashboardData så att data alltid finns tillgänglig
   updateCardsForSingleItem(item, currentDashboardData);
   renderDashboard(currentDashboardData);
 }
 
 function updateCardsForSingleItem(item, data) {
-  // Säkerställ att data finns
   const safeData = data || currentDashboardData || [];
 
   const belopp = parseNum(item.belopp);
@@ -264,7 +272,6 @@ function updateCardsForSingleItem(item, data) {
         document.getElementById('fuel-consumption').innerText = `- L/mil`;
       }
     } else {
-      // Om det är den äldsta tankningen i listan finns ingen tidigare mätarställning att jämföra med
       document.getElementById('fuel-consumption').innerText = `- L/mil`;
     }
   } else {
@@ -290,20 +297,73 @@ function clearSelection() {
   }
 }
 
-// Uppdatera även clearSelection för att återställa rubrikerna
-function clearSelection() {
-  selectedItem = null;
-  
-  // Återställ kortrubrikerna
-  document.querySelector('.card:nth-child(1) h3').innerText = 'Totalkostnad';
-  document.querySelector('.card:nth-child(2) h3').innerText = 'Mätarställning';
-  document.querySelector('.card:nth-child(3) h3').innerText = 'Senaste tankning';
-  document.querySelector('.card:nth-child(4) h3').innerText = 'Förbrukning';
+// Diagram-funktion för drivmedelspris över tid
+function renderPriceChart(data) {
+  const canvas = document.getElementById('priceChart');
+  if (!canvas || typeof Chart === 'undefined') return;
 
-  if (currentDashboardData.length > 0) {
-    renderDashboard(currentDashboardData);
+  const fuelEntries = data
+    .map(entry => ({
+      datum: entry.datum,
+      belopp: parseNum(entry.belopp),
+      liter: parseNum(entry.liter),
+      matarstallning: parseNum(entry.matarstallning)
+    }))
+    .filter(e => e.liter > 0 && e.belopp > 0 && e.datum)
+    .sort((a, b) => new Date(a.datum) - new Date(b.datum));
+
+  if (fuelEntries.length === 0) return;
+
+  const labels = fuelEntries.map(e => e.datum);
+  const pricesPerLiter = fuelEntries.map(e => (e.belopp / e.liter).toFixed(2));
+
+  if (priceChartInstance) {
+    priceChartInstance.destroy();
   }
+
+  const ctx = canvas.getContext('2d');
+  priceChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'kr / Liter',
+        data: pricesPerLiter,
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#2563eb'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `${context.raw.replace('.', ',')} kr/L`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          ticks: {
+            callback: function(value) {
+              return value + ' kr';
+            }
+          }
+        }
+      }
+    }
+  });
 }
 
-// Ladda dashboard vid start
+// Ladda data vid start
 loadDashboardData();
