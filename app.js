@@ -373,3 +373,73 @@ if (carForm) {
     }
   });
 }
+
+// ====================================================
+// HJÄLPFUNKTIONER
+// ====================================================
+
+// ----------------------------------------------------
+// Toast-meddelande
+// ----------------------------------------------------
+
+// Funktion för att visa toast-meddelande
+function showToast(message, isError = false) {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+
+  toast.innerText = message;
+  if (isError) {
+    toast.classList.add('error');
+  } else {
+    toast.classList.remove('error');
+  }
+
+  toast.classList.add('show');
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
+}
+
+// Formulärhantering för inmatning
+const carForm = document.getElementById('car-form');
+if (carForm) {
+  carForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Sparar...";
+
+    const payload = {
+      datum: document.getElementById('datum').value,
+      matarstallning: document.getElementById('matarstallning').value,
+      kategori: document.getElementById('kategori').value,
+      belopp: document.getElementById('belopp').value,
+      liter: document.getElementById('liter').value,
+      anteckning: document.getElementById('anteckning').value
+    };
+
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      // Ersätt alert med showToast
+      showToast("Händelsen har sparats!");
+      
+      carForm.reset();
+      document.getElementById('datum').valueAsDate = new Date();
+      switchTab('dashboard');
+      loadData();
+    } catch (error) {
+      console.error("Fel vid sparning:", error);
+      showToast("Kunde inte spara data.", true);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerText = "Spara händelse";
+    }
+  });
+}
