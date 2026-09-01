@@ -22,10 +22,12 @@ function switchTab(tabName, event) {
 
   if (event && event.currentTarget) event.currentTarget.classList.add('active');
 
-  // Rita om diagrammen så de anpassar storleken när man byter till historik
+  // Rita om diagrammen så de anpassar sin storlek när man byter till historikfliken
   if (tabName === 'history') {
-    if (priceChartInstance) priceChartInstance.resize();
-    if (consumptionChartInstance) consumptionChartInstance.resize();
+    setTimeout(() => {
+      if (priceChartInstance) priceChartInstance.resize();
+      if (consumptionChartInstance) consumptionChartInstance.resize();
+    }, 50);
   }
 }
 
@@ -43,6 +45,14 @@ function parseNum(val) {
   if (!val) return 0;
   const str = String(val).replace(',', '.').replace(/\s/g, '');
   return parseFloat(str) || 0;
+}
+
+// Formatera datum snyggt (t.ex. "2026-08-18")
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toISOString().split('T')[0];
 }
 
 // Hämta data från Google Sheets
@@ -77,13 +87,13 @@ function renderDashboard() {
     const unitPrice = parseNum(latest.belopp);
     const liter = parseNum(latest.liter);
     
-    // Om det är drivmedel är beloppet kr/L, annars är det totalkostnad
+    // Om det är drivmedel är beloppet kr/L, annars totalkostnad
     const totalCost = isFuel ? (unitPrice * liter) : unitPrice;
 
     latestContainer.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <strong>${latest.kategori}</strong>
-        <span style="font-size: 0.9em; color: #666;">${latest.datum}</span>
+        <span style="font-size: 0.9em; color: #666;">${formatDate(latest.datum)}</span>
       </div>
       <div style="font-size: 1.3em; font-weight: bold; margin: 6px 0; color: #2563eb;">
         ${totalCost.toFixed(2).replace('.', ',')} kr ${isFuel ? `<small style="font-size: 0.7em; font-weight: normal; color: #555;">(${unitPrice.toFixed(2).replace('.', ',')} kr/L)</small>` : ''}
@@ -99,7 +109,10 @@ function renderDashboard() {
   // 2. Fyll i årsväljaren
   const yearSelect = document.getElementById('year-select');
   if (yearSelect) {
-    const years = [...new Set(currentData.map(item => new Date(item.datum).getFullYear()))].sort((a, b) => b - a);
+    const years = [...new Set(currentData.map(item => new Date(item.datum).getFullYear()))]
+      .filter(y => !isNaN(y))
+      .sort((a, b) => b - a);
+    
     yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
     renderYearSummary();
   }
@@ -122,7 +135,6 @@ function renderYearSummary() {
     const amount = parseNum(item.belopp);
     const liter = parseNum(item.liter);
 
-    // Drivmedel: Pris/L * Liter = Totalkostnad. Övrigt: Belopp = Totalkostnad.
     const totalAmount = isFuel ? (amount * liter) : amount;
 
     totals[cat] = (totals[cat] || 0) + totalAmount;
@@ -154,7 +166,7 @@ function renderYearSummary() {
 }
 
 // ----------------------------------------------------
-// HISTORIK & ACCORDION
+// HISTORIK & DIAGRAM
 // ----------------------------------------------------
 function renderHistory() {
   if (!currentData || currentData.length === 0) return;
@@ -162,7 +174,7 @@ function renderHistory() {
   const fuelEntries = currentData
     .map(entry => ({
       ...entry,
-      pricePerLiter: parseNum(entry.belopp), // Belopp i Sheets ÄR litertpriset (kr/L)
+      pricePerLiter: parseNum(entry.belopp),
       literNum: parseNum(entry.liter),
       matarNum: parseNum(entry.matarstallning)
     }))
@@ -179,7 +191,7 @@ function renderHistory() {
       }
     }
     return {
-      datum: e.datum,
+      datum: formatDate(e.datum),
       pricePerLiter: e.pricePerLiter.toFixed(2),
       consumption: consumption
     };
@@ -187,6 +199,63 @@ function renderHistory() {
 
   renderCharts(calculatedFuelData);
   renderAccordionList(calculatedFuelData);
+}
+
+// RITA UPP DIAGRAMMEN
+function renderCharts(fuelData) {
+  const labels = fuelData.map(d => d.datum);
+
+  // 1. Diagram kr/liter
+  const priceCanvas = document.getElementById('priceChart');
+  if (priceCanvas && typeof Chart !== 'undefined') {
+    if (priceChartInstance) priceChartInstance.destroy();
+    priceChartInstance = new Chart(priceCanvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'kr / Liter',
+          data: fuelData.map(d => d.pricePerLiter),
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          fill: true,
+          tension: 0.2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+
+  // 2. Diagram L/mil
+  const consumptionCanvas = document.getElementById('consumptionChart');
+  if (consumptionCanvas && typeof Chart !== 'undefined') {
+    const validConsumptionData = fuelData.filter(d => d.consumption !== null);
+    
+    if (consumptionChartInstance) consumptionChartInstance.destroy();
+    consumptionChartInstance = new Chart(consumptionCanvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: validConsumptionData.map(d => d.datum),
+        datasets: [{
+          label: 'L / mil',
+          data: validConsumptionData.map(d => d.consumption),
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: true,
+          tension: 0.2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
 }
 
 function renderAccordionList(calculatedFuelData) {
@@ -202,13 +271,14 @@ function renderAccordionList(calculatedFuelData) {
     const amountInput = parseNum(item.belopp);
     const matar = parseNum(item.matarstallning);
     const liter = parseNum(item.liter);
+    const formattedDate = formatDate(item.datum);
 
     // Totalkostnad för raden
     const totalCost = isFuel ? (amountInput * liter) : amountInput;
 
     let consumptionText = '-';
     if (isFuel) {
-      const fuelMatch = calculatedFuelData.find(f => f.datum === item.datum);
+      const fuelMatch = calculatedFuelData.find(f => f.datum === formattedDate);
       if (fuelMatch && fuelMatch.consumption) {
         consumptionText = `${fuelMatch.consumption.replace('.', ',')} L/mil`;
       }
@@ -223,7 +293,7 @@ function renderAccordionList(calculatedFuelData) {
       <div onclick="toggleAccordion(${index})" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
           <strong>${item.kategori}</strong>
-          <span style="font-size: 0.85em; color: #666; margin-left: 6px;">(${item.datum})</span>
+          <span style="font-size: 0.85em; color: #666; margin-left: 6px;">(${formattedDate})</span>
         </div>
         <strong>${totalCost.toFixed(2).replace('.', ',')} kr</strong>
       </div>
@@ -241,7 +311,6 @@ function renderAccordionList(calculatedFuelData) {
   });
 }
 
-// Öppna/stäng accordion (flera kan vara öppna samtidigt)
 function toggleAccordion(index) {
   const content = document.getElementById(`accordion-content-${index}`);
   if (content) {
