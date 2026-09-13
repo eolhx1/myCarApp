@@ -1,3 +1,9 @@
+//
+// filename: app.js
+//
+// App för att ha koll på bilkostnader
+//
+
 const API_URL = "https://script.google.com/macros/s/AKfycbyDKCp8dmzKSPXIbFnFVwBlTL8TxQimY5K7X1tWIHGa1tFktV2F1E0jataaoEb1ELRb/exec";
 
 let currentData = [];
@@ -39,12 +45,18 @@ function toggleFuelInput() {
   const beloppLabel = document.getElementById('belopp-label');
   const beloppInput = document.getElementById('belopp');
 
+  // Mätarställning-element
+  const matarInput = document.getElementById('matarstallning');
+  const matarLabel = document.getElementById('matarstallning-label');
+
   const isFuel = (kategori === 'Drivmedel');
-  
+  const isOdometerRequired = (kategori === 'Drivmedel' || kategori === 'Service');
+
+  // Hantera synlighet för Liter-fältet
   if (literGroup) literGroup.style.display = isFuel ? 'block' : 'none';
   if (!isFuel && literInput) literInput.value = '';
 
-  // Ändra etikett och placeholder dynamiskt
+  // Ändra etikett för belopp dynamiskt
   if (beloppLabel && beloppInput) {
     if (isFuel) {
       beloppLabel.innerText = "Pris (kr/l)";
@@ -53,6 +65,14 @@ function toggleFuelInput() {
       beloppLabel.innerText = "Belopp (kr)";
       beloppInput.placeholder = "t.ex. 850.00";
     }
+  }
+
+  // Ställ in om mätarställning är obligatorisk
+  if (matarInput) {
+    matarInput.required = isOdometerRequired;
+  }
+  if (matarLabel) {
+    matarLabel.innerText = isOdometerRequired ? "Mätarställning (km) *" : "Mätarställning (km)";
   }
 }
 
@@ -114,7 +134,8 @@ function renderDashboard() {
         ${totalCost.toFixed(2).replace('.', ',')} kr ${isFuel ? `<small style="font-size: 0.7em; font-weight: normal; color: #555;">(${unitPrice.toFixed(2).replace('.', ',')} kr/L)</small>` : ''}
       </div>
       <div style="font-size: 0.9em; color: #444;">
-        Mätarställning: <strong>${parseNum(latest.matarstallning).toLocaleString('sv-SE')} km</strong>
+       // Mätarställning: <strong>${parseNum(latest.matarstallning).toLocaleString('sv-SE')} km</strong>
+        ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${matar.toLocaleString('sv-SE')} km</div>` : ''}
         ${liter > 0 ? `<br>Volym: <strong>${liter} L</strong>` : ''}
         ${latest.anteckning ? `<br><em>${latest.anteckning}</em>` : ''}
       </div>
