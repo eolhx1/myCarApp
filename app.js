@@ -128,24 +128,22 @@ function renderDashboard() {
 
         const matar = parseNum(latest.matarstallning);
 
+        // Byt ut totalkostnad och enhetspris mot formatKr:
         latestContainer.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
         <strong>${latest.kategori}</strong>
         <span style="font-size: 0.9em; color: #666;">${formatDate(latest.datum)}</span>
         </div>
         <div style="font-size: 1.3em; font-weight: bold; margin: 6px 0; color: #2563eb;">
-        ${totalCost.toFixed(2).replace('.', ',')} kr ${isFuel ? `<small style="font-size: 0.7em; font-weight: normal; color: #555;">(${unitPrice.toFixed(2).replace('.', ',')} kr/L)</small>`: ''}
+        ${formatKr(totalCost)} kr ${isFuel ? `<small style="font-size: 0.7em; font-weight: normal; color: #555;">(${formatKr(unitPrice)} kr/L)</small>`: ''}
         </div>
         <div style="font-size: 0.9em; color: #444;">
-        ${matar > 0 ? `Mätarställning: <strong>${matar.toLocaleString('sv-SE')} km</strong>`: ''}
+        ${matar > 0 ? `Mätarställning: <strong>${formatKm(matar)} km</strong>`: ''}
         ${liter > 0 ? `<br>Volym: <strong>${liter} L</strong>`: ''}
         ${latest.anteckning ? `<br><em>${latest.anteckning}</em>`: ''}
         </div>
         `;
     }
-
-
-
 
     // 2. Fyll i årsväljaren
     const yearSelect = document.getElementById('year-select');
@@ -192,19 +190,20 @@ function renderYearSummary() {
         html += `
         <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
         <span>${cat}</span>
-        <strong>${sum.toFixed(2).replace('.', ',')} kr</strong>
+        <strong>${formatKr(sum)} kr</strong>
         </li>
         `;
     }
     html += `
     <li style="display: flex; justify-content: space-between; padding: 10px 0 0 0; font-weight: bold; font-size: 1.05em; border-top: 2px solid #ccc; margin-top: 5px;">
     <span>Totalt ${selectedYear}</span>
-    <span>${yearTotal.toFixed(2).replace('.', ',')} kr</span>
+    <span>${formatKr(yearTotal)} kr</span>
     </li>
     </ul>`;
 
     summaryContainer.innerHTML = html;
 }
+
 
 // ----------------------------------------------------
 // HISTORIK & DIAGRAM
@@ -350,20 +349,20 @@ function renderAccordionList(calculatedFuelData) {
         <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-        <strong style="font-size: 1.05rem; color: var(--primary-color);">${totalCost.toFixed(2).replace('.', ',')} kr</strong>
+        <strong style="font-size: 1.05rem; color: var(--primary-color);">${formatKr(totalCost)} kr</strong>
         <button type="button" class="edit-btn" title="Redigera" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px;">✏️</button>
         </div>
         </div>
 
         <div id="accordion-content-${index}" class="history-card-details" style="display: none;">
-        ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${matar.toLocaleString('sv-SE')} km</div>`: ''}
+        ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${formatKm(matar)} km</div>`: ''}
         ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>`: ''}
-        ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${amountInput.toFixed(2).replace('.', ',')} kr/L</div>`: ''}
+        ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${formatKr(amountInput)} kr/L</div>`: ''}
         ${isFuel ? `<div><strong>Förbrukning:</strong> ${consumptionText}</div>`: ''}
         ${item.anteckning ? `<div style="margin-top: 4px; color: #64748b;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>`: ''}
         </div>
-
         `;
+
 
         // Koppla klick på penn-ikonen till redigeringsfunktionen
         const editBtn = card.querySelector('.edit-btn');
@@ -513,4 +512,21 @@ function showToast(message, isError = false) {
     setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
+}
+
+// ----------------------------------------------------
+// HJÄLPFUNKTIONER
+// ----------------------------------------------------
+// Formaterar kronor med tusentalsavgränsare och 2 decimaler (t.ex. 1 250,50 kr)
+function formatKr(val) {
+    const num = parseNum(val);
+    return num.toLocaleString('sv-SE', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+}
+
+// Formaterar mätarställning med tusentalsavgränsare utan decimaler (t.ex. 112 363 km)
+function formatKm(val) {
+    const num = parseNum(val);
+    return num > 0 ? num.toLocaleString('sv-SE'): '';
 }
