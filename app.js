@@ -145,14 +145,21 @@ function renderDashboard() {
         `;
     }
 
-    // 2. Fyll i årsväljaren
+    // 2. Fyll i tidsperiodsväljaren (12 månader + specifika år)
     const yearSelect = document.getElementById('year-select');
     if (yearSelect) {
         const years = [...new Set(currentData.map(item => new Date(item.datum).getFullYear()))]
         .filter(y => !isNaN(y))
         .sort((a, b) => b - a);
 
-        yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+        let optionsHtml = `<option value="12m">Senaste 12 månaderna</option>`;
+        optionsHtml += years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+        yearSelect.innerHTML = optionsHtml;
+
+        // Sätt event listener för när användaren byter val
+        yearSelect.onchange = renderYearSummary;
+
         renderYearSummary();
     }
 }
@@ -162,13 +169,26 @@ function renderYearSummary() {
     const summaryContainer = document.getElementById('year-summary-list');
     if (!yearSelect || !summaryContainer) return;
 
-    const selectedYear = parseInt(yearSelect.value);
-    const yearEntries = currentData.filter(item => new Date(item.datum).getFullYear() === selectedYear);
+    const selectedValue = yearSelect.value;
+    let filteredEntries = [];
+    let periodLabel = "";
+
+    if (selectedValue === '12m') {
+        const twelveMonthsAgo = new Date();
+        twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+
+        filteredEntries = currentData.filter(item => item.datum && new Date(item.datum) >= twelveMonthsAgo);
+        periodLabel = "Totalt senaste 12 mån";
+    } else {
+        const selectedYear = parseInt(selectedValue);
+        filteredEntries = currentData.filter(item => item.datum && new Date(item.datum).getFullYear() === selectedYear);
+        periodLabel = `Totalt ${selectedYear}`;
+    }
 
     const totals = {};
-    let yearTotal = 0;
+    let periodTotal = 0;
 
-    yearEntries.forEach(item => {
+    filteredEntries.forEach(item => {
         const cat = item.kategori || 'Övrigt';
         const isFuel = cat === 'Drivmedel';
         const amount = parseNum(item.belopp);
@@ -177,11 +197,11 @@ function renderYearSummary() {
         const totalAmount = isFuel ? (amount * liter): amount;
 
         totals[cat] = (totals[cat] || 0) + totalAmount;
-        yearTotal += totalAmount;
+        periodTotal += totalAmount;
     });
 
     if (Object.keys(totals).length === 0) {
-        summaryContainer.innerHTML = '<em>Inga händelser registrerade detta år.</em>';
+        summaryContainer.innerHTML = '<em>Inga händelser registrerade för vald tidsperiod.</em>';
         return;
     }
 
@@ -196,8 +216,8 @@ function renderYearSummary() {
     }
     html += `
     <li style="display: flex; justify-content: space-between; padding: 10px 0 0 0; font-weight: bold; font-size: 1.05em; border-top: 2px solid #ccc; margin-top: 5px;">
-    <span>Totalt ${selectedYear}</span>
-    <span>${formatKr(yearTotal)} kr</span>
+    <span>${periodLabel}</span>
+    <span>${formatKr(periodTotal)} kr</span>
     </li>
     </ul>`;
 
@@ -210,227 +230,228 @@ function renderYearSummary() {
 // ----------------------------------------------------
 
 function toggleFilterDropdown() {
-  const dropdown = document.getElementById('history-filter-dropdown');
-  if (dropdown) {
-    dropdown.style.display = (dropdown.style.display === 'none' || dropdown.style.display === '') ? 'block' : 'none';
-  }
+    const dropdown = document.getElementById('history-filter-dropdown');
+    if (dropdown) {
+        dropdown.style.display = (dropdown.style.display === 'none' || dropdown.style.display === '') ? 'block': 'none';
+    }
 }
 
 // Stäng dropdownen om användaren klickar utanför
 document.addEventListener('click', (e) => {
-  const btn = document.getElementById('history-filter-btn');
-  const dropdown = document.getElementById('history-filter-dropdown');
-  if (dropdown && btn && !btn.contains(e.target) && !dropdown.contains(e.target)) {
-    dropdown.style.display = 'none';
-  }
+    const btn = document.getElementById('history-filter-btn');
+    const dropdown = document.getElementById('history-filter-dropdown');
+    if (dropdown && btn && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+    }
 });
 
 function initHistoryFilterUI() {
-  const container = document.getElementById('year-checkboxes-container');
-  if (!container || !currentData || currentData.length === 0) return;
+    const container = document.getElementById('year-checkboxes-container');
+    if (!container || !currentData || currentData.length === 0) return;
 
-  const years = [...new Set(currentData.map(item => new Date(item.datum).getFullYear()))]
+    const years = [...new Set(currentData.map(item => new Date(item.datum).getFullYear()))]
     .filter(y => !isNaN(y))
     .sort((a, b) => b - a);
 
-  let html = '';
-  years.forEach(year => {
-    html += `
-      <label style="display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; color: #334155;">
+    let html = '';
+    years.forEach(year => {
+        html += `
+        <label style="display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; color: #334155;">
         <input type="checkbox" class="filter-year-cb" value="${year}" onchange="handleFilterChange('year')">
         ${year}
-      </label>
-    `;
-  });
+        </label>
+        `;
+    });
 
-  container.innerHTML = html;
-  updateCheckboxStates();
+    container.innerHTML = html;
+    updateCheckboxStates();
 }
 
 function handleFilterChange(changedType) {
-  const cb12m = document.getElementById('filter-12m');
-  const yearCbs = document.querySelectorAll('.filter-year-cb');
+    const cb12m = document.getElementById('filter-12m');
+    const yearCbs = document.querySelectorAll('.filter-year-cb');
 
-  if (changedType === '12m' && cb12m.checked) {
-    // Om användaren bockar i 12M, bocka ur alla år
-    yearCbs.forEach(cb => cb.checked = false);
-  } else if (changedType === 'year') {
-    // Om användaren bockar i något år, avbocka 12M
-    const anyYearChecked = Array.from(yearCbs).some(cb => cb.checked);
-    if (anyYearChecked) {
-      cb12m.checked = false;
-    } else {
-      // Om inga år är i bockade, gå tillbaka till 12M
-      cb12m.checked = true;
+    if (changedType === '12m' && cb12m.checked) {
+        // Om användaren bockar i 12M, bocka ur alla år
+        yearCbs.forEach(cb => cb.checked = false);
+    } else if (changedType === 'year') {
+        // Om användaren bockar i något år, avbocka 12M
+        const anyYearChecked = Array.from(yearCbs).some(cb => cb.checked);
+        if (anyYearChecked) {
+            cb12m.checked = false;
+        } else {
+            // Om inga år är i bockade, gå tillbaka till 12M
+            cb12m.checked = true;
+        }
     }
-  }
 
-  updateCheckboxStates();
-  renderHistory();
+    updateCheckboxStates();
+    renderHistory();
 }
 
 function updateCheckboxStates() {
-  const cb12m = document.getElementById('filter-12m');
-  const yearCbs = document.querySelectorAll('.filter-year-cb');
-  const btnText = document.getElementById('history-filter-text');
+    const cb12m = document.getElementById('filter-12m');
+    const yearCbs = document.querySelectorAll('.filter-year-cb');
+    const btnText = document.getElementById('history-filter-text');
 
-  // Lås/Inaktivera årskryssrutorna om 12M är aktivt
-  yearCbs.forEach(cb => {
-    cb.disabled = cb12m.checked;
-    if (cb.parentElement) {
-      cb.parentElement.style.opacity = cb12m.checked ? '0.5' : '1';
-    }
-  });
+    // Lås/Inaktivera årskryssrutorna om 12M är aktivt
+    yearCbs.forEach(cb => {
+        cb.disabled = cb12m.checked;
+        if (cb.parentElement) {
+            cb.parentElement.style.opacity = cb12m.checked ? '0.5': '1';
+        }
+    });
 
-  // Uppdatera knapptexten i UI
-  if (cb12m.checked) {
-    if (btnText) btnText.innerText = "Senaste 12 månaderna";
-  } else {
-    const selectedYears = Array.from(yearCbs)
-      .filter(cb => cb.checked)
-      .map(cb => cb.value);
-    if (btnText) {
-      btnText.innerText = selectedYears.length > 0 ? `År: ${selectedYears.join(', ')}` : "Välj tidsperiod";
+    // Uppdatera knapptexten i UI
+    if (cb12m.checked) {
+        if (btnText) btnText.innerText = "Senaste 12 månaderna";
+    } else {
+        const selectedYears = Array.from(yearCbs)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+        if (btnText) {
+            btnText.innerText = selectedYears.length > 0 ? `År: ${selectedYears.join(', ')}`: "Välj tidsperiod";
+        }
     }
-  }
 }
 
 function getFilteredData() {
-  if (!currentData || currentData.length === 0) return [];
+    if (!currentData || currentData.length === 0) return [];
 
-  const cb12m = document.getElementById('filter-12m');
-  const yearCbs = document.querySelectorAll('.filter-year-cb');
+    const cb12m = document.getElementById('filter-12m');
+    const yearCbs = document.querySelectorAll('.filter-year-cb');
 
-  if (cb12m && cb12m.checked) {
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
-    return currentData.filter(item => item.datum && new Date(item.datum) >= twelveMonthsAgo);
-  } else {
-    const selectedYears = Array.from(yearCbs)
-      .filter(cb => cb.checked)
-      .map(cb => parseInt(cb.value));
+    if (cb12m && cb12m.checked) {
+        const twelveMonthsAgo = new Date();
+        twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+        return currentData.filter(item => item.datum && new Date(item.datum) >= twelveMonthsAgo);
+    } else {
+        const selectedYears = Array.from(yearCbs)
+        .filter(cb => cb.checked)
+        .map(cb => parseInt(cb.value));
 
-    if (selectedYears.length === 0) return currentData; // Fallback
-    return currentData.filter(item => item.datum && selectedYears.includes(new Date(item.datum).getFullYear()));
-  }
+        if (selectedYears.length === 0) return currentData; // Fallback
+        return currentData.filter(item => item.datum && selectedYears.includes(new Date(item.datum).getFullYear()));
+    }
 }
 
 // Huvudfunktion för att rendera om historiken och diagrammen utifrån filtret
 function renderHistory() {
-  if (!currentData || currentData.length === 0) return;
+    if (!currentData || currentData.length === 0) return;
 
-  const filteredData = getFilteredData();
+    const filteredData = getFilteredData();
 
-  // Beräkna drivmedelsförbrukning baserat på urvalet
-  const fuelEntries = filteredData
+    // Beräkna drivmedelsförbrukning baserat på urvalet
+    const fuelEntries = filteredData
     .map(entry => ({
-      ...entry,
-      pricePerLiter: parseNum(entry.belopp),
-      literNum: parseNum(entry.liter),
-      matarNum: parseNum(entry.matarstallning)
+        ...entry,
+        pricePerLiter: parseNum(entry.belopp),
+        literNum: parseNum(entry.liter),
+        matarNum: parseNum(entry.matarstallning)
     }))
     .filter(e => e.kategori === 'Drivmedel' && e.literNum > 0 && e.matarNum > 0 && e.datum)
     .sort((a, b) => new Date(a.datum) - new Date(b.datum));
 
-  const calculatedFuelData = fuelEntries.map((e, index) => {
-    let consumption = null;
-    if (index > 0) {
-      const prev = fuelEntries[index - 1];
-      const kmDriven = e.matarNum - prev.matarNum;
-      if (kmDriven > 0) {
-        consumption = (e.literNum / (kmDriven / 10)).toFixed(2);
-      }
-    }
-    return {
-      datum: formatDate(e.datum),
-      pricePerLiter: e.pricePerLiter.toFixed(2),
-      consumption: consumption
-    };
-  });
+    const calculatedFuelData = fuelEntries.map((e, index) => {
+        let consumption = null;
+        if (index > 0) {
+            const prev = fuelEntries[index - 1];
+            const kmDriven = e.matarNum - prev.matarNum;
+            if (kmDriven > 0) {
+                consumption = (e.literNum / (kmDriven / 10)).toFixed(2);
+            }
+        }
+        return {
+            datum: formatDate(e.datum),
+            pricePerLiter: e.pricePerLiter.toFixed(2),
+            consumption: consumption
+        };
+    });
 
-  renderCharts(calculatedFuelData);
-  renderAccordionList(filteredData, calculatedFuelData);
+    renderCharts(calculatedFuelData);
+    renderAccordionList(filteredData,
+        calculatedFuelData);
 }
 
 // Komplettera loadData() så att filtret initieras vid dataladdning
 async function loadData() {
-  try {
-    const response = await fetch(API_URL);
-    const result = await response.json();
-    
-    if (result.status === "success") {
-      currentData = result.data || [];
-      renderDashboard();
-      initHistoryFilterUI(); // Skapar årskryssrutorna
-      renderHistory();
+    try {
+        const response = await fetch(API_URL);
+        const result = await response.json();
+
+        if (result.status === "success") {
+            currentData = result.data || [];
+            renderDashboard();
+            initHistoryFilterUI(); // Skapar årskryssrutorna
+            renderHistory();
+        }
+    } catch (error) {
+        console.error("Fel vid hämtning:", error);
     }
-  } catch (error) {
-    console.error("Fel vid hämtning:", error);
-  }
 }
 
 function renderAccordionList(filteredData, calculatedFuelData) {
-  const container = document.getElementById('history-accordion-list');
-  if (!container) return;
+    const container = document.getElementById('history-accordion-list');
+    if (!container) return;
 
-  const sortedData = [...filteredData].sort((a, b) => new Date(b.datum || 0) - new Date(a.datum || 0));
+    const sortedData = [...filteredData].sort((a, b) => new Date(b.datum || 0) - new Date(a.datum || 0));
 
-  container.innerHTML = '';
+    container.innerHTML = '';
 
-  if (sortedData.length === 0) {
-    container.innerHTML = '<em>Inga händelser hittades för vald tidsperiod.</em>';
-    return;
-  }
-
-  sortedData.forEach((item, index) => {
-    const isFuel = item.kategori === 'Drivmedel';
-    const amountInput = parseNum(item.belopp);
-    const matar = parseNum(item.matarstallning);
-    const liter = parseNum(item.liter);
-    const formattedDate = formatDate(item.datum);
-    const totalCost = isFuel ? (amountInput * liter) : amountInput;
-
-    let consumptionText = '-';
-    if (isFuel) {
-      const fuelMatch = calculatedFuelData.find(f => f.datum === formattedDate);
-      if (fuelMatch && fuelMatch.consumption) {
-        consumptionText = `${fuelMatch.consumption.replace('.', ',')} L/mil`;
-      }
+    if (sortedData.length === 0) {
+        container.innerHTML = '<em>Inga händelser hittades för vald tidsperiod.</em>';
+        return;
     }
 
-    const card = document.createElement('div');
-    card.className = 'history-card';
-    card.onclick = () => toggleAccordion(index);
+    sortedData.forEach((item, index) => {
+        const isFuel = item.kategori === 'Drivmedel';
+        const amountInput = parseNum(item.belopp);
+        const matar = parseNum(item.matarstallning);
+        const liter = parseNum(item.liter);
+        const formattedDate = formatDate(item.datum);
+        const totalCost = isFuel ? (amountInput * liter): amountInput;
 
-    card.innerHTML = `
-      <div class="history-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        let consumptionText = '-';
+        if (isFuel) {
+            const fuelMatch = calculatedFuelData.find(f => f.datum === formattedDate);
+            if (fuelMatch && fuelMatch.consumption) {
+                consumptionText = `${fuelMatch.consumption.replace('.', ',')} L/mil`;
+            }
+        }
+
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        card.onclick = () => toggleAccordion(index);
+
+        card.innerHTML = `
+        <div class="history-card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
-          <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
+        <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
+        <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <strong style="font-size: 1.05rem; color: var(--primary-color);">${formatKr(totalCost)} kr</strong>
-          <button type="button" class="edit-btn" title="Redigera" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px;">✏️</button>
+        <strong style="font-size: 1.05rem; color: var(--primary-color);">${formatKr(totalCost)} kr</strong>
+        <button type="button" class="edit-btn" title="Redigera" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px;">✏️</button>
         </div>
-      </div>
+        </div>
 
-      <div id="accordion-content-${index}" class="history-card-details" style="display: none;">
-        ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${formatKm(matar)} km</div>` : ''}
-        ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>` : ''}
-        ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${formatKr(amountInput)} kr/L</div>` : ''}
-        ${isFuel ? `<div><strong>Förbrukning:</strong> ${consumptionText}</div>` : ''}
-        ${item.anteckning ? `<div style="margin-top: 4px; color: #64748b;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>` : ''}
-      </div>
-    `;
+        <div id="accordion-content-${index}" class="history-card-details" style="display: none;">
+        ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${formatKm(matar)} km</div>`: ''}
+        ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>`: ''}
+        ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${formatKr(amountInput)} kr/L</div>`: ''}
+        ${isFuel ? `<div><strong>Förbrukning:</strong> ${consumptionText}</div>`: ''}
+        ${item.anteckning ? `<div style="margin-top: 4px; color: #64748b;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>`: ''}
+        </div>
+        `;
 
-    const editBtn = card.querySelector('.edit-btn');
-    editBtn.onclick = (e) => {
-      e.stopPropagation();
-      editItem(item);
-    };
+        const editBtn = card.querySelector('.edit-btn');
+        editBtn.onclick = (e) => {
+            e.stopPropagation();
+            editItem(item);
+        };
 
-    container.appendChild(card);
-  });
+        container.appendChild(card);
+    });
 }
 
 
@@ -542,75 +563,87 @@ function formatKm(val) {
 // ----------------------------------------------------
 
 function toggleAccordion(index) {
-  const content = document.getElementById(`accordion-content-${index}`);
-  if (content) {
-    const isVisible = content.style.display === 'block';
-    content.style.display = isVisible ? 'none' : 'block';
-  }
+    const content = document.getElementById(`accordion-content-${index}`);
+    if (content) {
+        const isVisible = content.style.display === 'block';
+        content.style.display = isVisible ? 'none': 'block';
+    }
 }
 
 function renderCharts(fuelData) {
-  const priceCtx = document.getElementById('priceChart');
-  const consCtx = document.getElementById('consumptionChart');
+    const priceCtx = document.getElementById('priceChart');
+    const consCtx = document.getElementById('consumptionChart');
 
-  if (!priceCtx || !consCtx) return;
+    if (!priceCtx || !consCtx) return;
 
-  const labels = fuelData.map(d => d.datum);
-  const priceValues = fuelData.map(d => parseFloat(d.pricePerLiter));
-  const consValues = fuelData.map(d => d.consumption ? parseFloat(d.consumption) : null);
+    const labels = fuelData.map(d => d.datum);
+    const priceValues = fuelData.map(d => parseFloat(d.pricePerLiter));
+    const consValues = fuelData.map(d => d.consumption ? parseFloat(d.consumption): null);
 
-  // 1. Diagram: Drivmedelspris (kr/L)
-  if (priceChartInstance) priceChartInstance.destroy();
-  priceChartInstance = new Chart(priceCtx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'kr/L',
-        data: priceValues,
-        borderColor: '#2563eb',
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.2
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: false }
-      }
-    }
-  });
+    // 1. Diagram: Drivmedelspris (kr/L)
+    if (priceChartInstance) priceChartInstance.destroy();
+    priceChartInstance = new Chart(priceCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'kr/L',
+                data: priceValues,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
 
-  // 2. Diagram: Förbrukning (L/mil)
-  if (consumptionChartInstance) consumptionChartInstance.destroy();
-  consumptionChartInstance = new Chart(consCtx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'L/mil',
-        data: consValues,
-        borderColor: '#16a34a',
-        backgroundColor: 'rgba(22, 163, 74, 0.1)',
-        borderWidth: 2,
-        spanGaps: true,
-        fill: true,
-        tension: 0.2
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: false }
-      }
-    }
-  });
+    // 2. Diagram: Förbrukning (L/mil)
+    if (consumptionChartInstance) consumptionChartInstance.destroy();
+    consumptionChartInstance = new Chart(consCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'L/mil',
+                data: consValues,
+                borderColor: '#16a34a',
+                backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                borderWidth: 2,
+                spanGaps: true,
+                fill: true,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
 }
 
 // ----------------------------------------------------
@@ -618,34 +651,34 @@ function renderCharts(fuelData) {
 // ----------------------------------------------------
 
 function editItem(item) {
-  editingRowIndex = item.rowIndex || null;
+    editingRowIndex = item.rowIndex || null;
 
-  document.getElementById('datum').value = formatDate(item.datum);
-  document.getElementById('matarstallning').value = item.matarstallning || '';
-  document.getElementById('kategori').value = item.kategori || 'Drivmedel';
-  document.getElementById('belopp').value = item.belopp || '';
-  document.getElementById('liter').value = item.liter || '';
-  document.getElementById('anteckning').value = item.anteckning || '';
+    document.getElementById('datum').value = formatDate(item.datum);
+    document.getElementById('matarstallning').value = item.matarstallning || '';
+    document.getElementById('kategori').value = item.kategori || 'Drivmedel';
+    document.getElementById('belopp').value = item.belopp || '';
+    document.getElementById('liter').value = item.liter || '';
+    document.getElementById('anteckning').value = item.anteckning || '';
 
-  toggleFuelInput();
+    toggleFuelInput();
 
-  const submitBtn = document.getElementById('submit-btn');
-  if (submitBtn) submitBtn.innerText = "Uppdatera händelse";
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) submitBtn.innerText = "Uppdatera händelse";
 
-  // Växla till "Mata in"-fliken
-  switchTab('input');
+    // Växla till "Mata in"-fliken
+    switchTab('input');
 }
 
 function resetForm() {
-  editingRowIndex = null;
-  const carForm = document.getElementById('car-form');
-  if (carForm) carForm.reset();
+    editingRowIndex = null;
+    const carForm = document.getElementById('car-form');
+    if (carForm) carForm.reset();
 
-  const datumInput = document.getElementById('datum');
-  if (datumInput) datumInput.valueAsDate = new Date();
+    const datumInput = document.getElementById('datum');
+    if (datumInput) datumInput.valueAsDate = new Date();
 
-  toggleFuelInput();
+    toggleFuelInput();
 
-  const submitBtn = document.getElementById('submit-btn');
-  if (submitBtn) submitBtn.innerText = "Spara händelse";
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) submitBtn.innerText = "Spara händelse";
 }
