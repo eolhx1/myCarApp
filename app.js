@@ -536,3 +536,116 @@ function formatKm(val) {
     const num = parseNum(val);
     return num > 0 ? num.toLocaleString('sv-SE'): '';
 }
+
+// ----------------------------------------------------
+// DIAGRAM OCH ACCORDION LOGIK
+// ----------------------------------------------------
+
+function toggleAccordion(index) {
+  const content = document.getElementById(`accordion-content-${index}`);
+  if (content) {
+    const isVisible = content.style.display === 'block';
+    content.style.display = isVisible ? 'none' : 'block';
+  }
+}
+
+function renderCharts(fuelData) {
+  const priceCtx = document.getElementById('priceChart');
+  const consCtx = document.getElementById('consumptionChart');
+
+  if (!priceCtx || !consCtx) return;
+
+  const labels = fuelData.map(d => d.datum);
+  const priceValues = fuelData.map(d => parseFloat(d.pricePerLiter));
+  const consValues = fuelData.map(d => d.consumption ? parseFloat(d.consumption) : null);
+
+  // 1. Diagram: Drivmedelspris (kr/L)
+  if (priceChartInstance) priceChartInstance.destroy();
+  priceChartInstance = new Chart(priceCtx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'kr/L',
+        data: priceValues,
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: false }
+      }
+    }
+  });
+
+  // 2. Diagram: Förbrukning (L/mil)
+  if (consumptionChartInstance) consumptionChartInstance.destroy();
+  consumptionChartInstance = new Chart(consCtx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'L/mil',
+        data: consValues,
+        borderColor: '#16a34a',
+        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+        borderWidth: 2,
+        spanGaps: true,
+        fill: true,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: false }
+      }
+    }
+  });
+}
+
+// ----------------------------------------------------
+// REDIGERING OCH ÅTERSTÄLLNING AV FORMULÄR
+// ----------------------------------------------------
+
+function editItem(item) {
+  editingRowIndex = item.rowIndex || null;
+
+  document.getElementById('datum').value = formatDate(item.datum);
+  document.getElementById('matarstallning').value = item.matarstallning || '';
+  document.getElementById('kategori').value = item.kategori || 'Drivmedel';
+  document.getElementById('belopp').value = item.belopp || '';
+  document.getElementById('liter').value = item.liter || '';
+  document.getElementById('anteckning').value = item.anteckning || '';
+
+  toggleFuelInput();
+
+  const submitBtn = document.getElementById('submit-btn');
+  if (submitBtn) submitBtn.innerText = "Uppdatera händelse";
+
+  // Växla till "Mata in"-fliken
+  switchTab('input');
+}
+
+function resetForm() {
+  editingRowIndex = null;
+  const carForm = document.getElementById('car-form');
+  if (carForm) carForm.reset();
+
+  const datumInput = document.getElementById('datum');
+  if (datumInput) datumInput.valueAsDate = new Date();
+
+  toggleFuelInput();
+
+  const submitBtn = document.getElementById('submit-btn');
+  if (submitBtn) submitBtn.innerText = "Spara händelse";
+}
