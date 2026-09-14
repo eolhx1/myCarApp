@@ -206,227 +206,233 @@ function renderYearSummary() {
 
 
 // ----------------------------------------------------
-// HISTORIK & DIAGRAM
+// HISTORIK, FILTER & DIAGRAM
 // ----------------------------------------------------
-function renderHistory() {
-    if (!currentData || currentData.length === 0) return;
 
-    const fuelEntries = currentData
+function toggleFilterDropdown() {
+  const dropdown = document.getElementById('history-filter-dropdown');
+  if (dropdown) {
+    dropdown.style.display = (dropdown.style.display === 'none' || dropdown.style.display === '') ? 'block' : 'none';
+  }
+}
+
+// Stäng dropdownen om användaren klickar utanför
+document.addEventListener('click', (e) => {
+  const btn = document.getElementById('history-filter-btn');
+  const dropdown = document.getElementById('history-filter-dropdown');
+  if (dropdown && btn && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
+
+function initHistoryFilterUI() {
+  const container = document.getElementById('year-checkboxes-container');
+  if (!container || !currentData || currentData.length === 0) return;
+
+  const years = [...new Set(currentData.map(item => new Date(item.datum).getFullYear()))]
+    .filter(y => !isNaN(y))
+    .sort((a, b) => b - a);
+
+  let html = '';
+  years.forEach(year => {
+    html += `
+      <label style="display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; color: #334155;">
+        <input type="checkbox" class="filter-year-cb" value="${year}" onchange="handleFilterChange('year')">
+        ${year}
+      </label>
+    `;
+  });
+
+  container.innerHTML = html;
+  updateCheckboxStates();
+}
+
+function handleFilterChange(changedType) {
+  const cb12m = document.getElementById('filter-12m');
+  const yearCbs = document.querySelectorAll('.filter-year-cb');
+
+  if (changedType === '12m' && cb12m.checked) {
+    // Om användaren bockar i 12M, bocka ur alla år
+    yearCbs.forEach(cb => cb.checked = false);
+  } else if (changedType === 'year') {
+    // Om användaren bockar i något år, avbocka 12M
+    const anyYearChecked = Array.from(yearCbs).some(cb => cb.checked);
+    if (anyYearChecked) {
+      cb12m.checked = false;
+    } else {
+      // Om inga år är i bockade, gå tillbaka till 12M
+      cb12m.checked = true;
+    }
+  }
+
+  updateCheckboxStates();
+  renderHistory();
+}
+
+function updateCheckboxStates() {
+  const cb12m = document.getElementById('filter-12m');
+  const yearCbs = document.querySelectorAll('.filter-year-cb');
+  const btnText = document.getElementById('history-filter-text');
+
+  // Lås/Inaktivera årskryssrutorna om 12M är aktivt
+  yearCbs.forEach(cb => {
+    cb.disabled = cb12m.checked;
+    if (cb.parentElement) {
+      cb.parentElement.style.opacity = cb12m.checked ? '0.5' : '1';
+    }
+  });
+
+  // Uppdatera knapptexten i UI
+  if (cb12m.checked) {
+    if (btnText) btnText.innerText = "Senaste 12 månaderna";
+  } else {
+    const selectedYears = Array.from(yearCbs)
+      .filter(cb => cb.checked)
+      .map(cb => cb.value);
+    if (btnText) {
+      btnText.innerText = selectedYears.length > 0 ? `År: ${selectedYears.join(', ')}` : "Välj tidsperiod";
+    }
+  }
+}
+
+function getFilteredData() {
+  if (!currentData || currentData.length === 0) return [];
+
+  const cb12m = document.getElementById('filter-12m');
+  const yearCbs = document.querySelectorAll('.filter-year-cb');
+
+  if (cb12m && cb12m.checked) {
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+    return currentData.filter(item => item.datum && new Date(item.datum) >= twelveMonthsAgo);
+  } else {
+    const selectedYears = Array.from(yearCbs)
+      .filter(cb => cb.checked)
+      .map(cb => parseInt(cb.value));
+
+    if (selectedYears.length === 0) return currentData; // Fallback
+    return currentData.filter(item => item.datum && selectedYears.includes(new Date(item.datum).getFullYear()));
+  }
+}
+
+// Huvudfunktion för att rendera om historiken och diagrammen utifrån filtret
+function renderHistory() {
+  if (!currentData || currentData.length === 0) return;
+
+  const filteredData = getFilteredData();
+
+  // Beräkna drivmedelsförbrukning baserat på urvalet
+  const fuelEntries = filteredData
     .map(entry => ({
-        ...entry,
-        pricePerLiter: parseNum(entry.belopp),
-        literNum: parseNum(entry.liter),
-        matarNum: parseNum(entry.matarstallning)
+      ...entry,
+      pricePerLiter: parseNum(entry.belopp),
+      literNum: parseNum(entry.liter),
+      matarNum: parseNum(entry.matarstallning)
     }))
     .filter(e => e.kategori === 'Drivmedel' && e.literNum > 0 && e.matarNum > 0 && e.datum)
     .sort((a, b) => new Date(a.datum) - new Date(b.datum));
 
-    const calculatedFuelData = fuelEntries.map((e, index) => {
-        let consumption = null;
-        if (index > 0) {
-            const prev = fuelEntries[index - 1];
-            const kmDriven = e.matarNum - prev.matarNum;
-            if (kmDriven > 0) {
-                consumption = (e.literNum / (kmDriven / 10)).toFixed(2);
-            }
-        }
-        return {
-            datum: formatDate(e.datum),
-            pricePerLiter: e.pricePerLiter.toFixed(2),
-            consumption: consumption
-        };
-    });
+  const calculatedFuelData = fuelEntries.map((e, index) => {
+    let consumption = null;
+    if (index > 0) {
+      const prev = fuelEntries[index - 1];
+      const kmDriven = e.matarNum - prev.matarNum;
+      if (kmDriven > 0) {
+        consumption = (e.literNum / (kmDriven / 10)).toFixed(2);
+      }
+    }
+    return {
+      datum: formatDate(e.datum),
+      pricePerLiter: e.pricePerLiter.toFixed(2),
+      consumption: consumption
+    };
+  });
 
-    renderCharts(calculatedFuelData);
-    renderAccordionList(calculatedFuelData);
+  renderCharts(calculatedFuelData);
+  renderAccordionList(filteredData, calculatedFuelData);
 }
 
-// RITA UPP DIAGRAMMEN
-function renderCharts(fuelData) {
-    const labels = fuelData.map(d => d.datum);
-
-    // 1. Diagram kr/liter
-    const priceCanvas = document.getElementById('priceChart');
-    if (priceCanvas && typeof Chart !== 'undefined') {
-        if (priceChartInstance) priceChartInstance.destroy();
-        priceChartInstance = new Chart(priceCanvas.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'kr / Liter',
-                    data: fuelData.map(d => d.pricePerLiter),
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    fill: true,
-                    tension: 0.2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
+// Komplettera loadData() så att filtret initieras vid dataladdning
+async function loadData() {
+  try {
+    const response = await fetch(API_URL);
+    const result = await response.json();
+    
+    if (result.status === "success") {
+      currentData = result.data || [];
+      renderDashboard();
+      initHistoryFilterUI(); // Skapar årskryssrutorna
+      renderHistory();
     }
-
-    // 2. Diagram L/mil
-    const consumptionCanvas = document.getElementById('consumptionChart');
-    if (consumptionCanvas && typeof Chart !== 'undefined') {
-        const validConsumptionData = fuelData.filter(d => d.consumption !== null);
-
-        if (consumptionChartInstance) consumptionChartInstance.destroy();
-        consumptionChartInstance = new Chart(consumptionCanvas.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: validConsumptionData.map(d => d.datum),
-                datasets: [{
-                    label: 'L / mil',
-                    data: validConsumptionData.map(d => d.consumption),
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    fill: true,
-                    tension: 0.2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
+  } catch (error) {
+    console.error("Fel vid hämtning:", error);
+  }
 }
 
-function toggleAccordion(index) {
-    const content = document.getElementById(`accordion-content-${index}`);
-    if (content) {
-        const isHidden = content.style.display === 'none' || content.style.display === '';
-        content.style.display = isHidden ? 'block': 'none';
+function renderAccordionList(filteredData, calculatedFuelData) {
+  const container = document.getElementById('history-accordion-list');
+  if (!container) return;
+
+  const sortedData = [...filteredData].sort((a, b) => new Date(b.datum || 0) - new Date(a.datum || 0));
+
+  container.innerHTML = '';
+
+  if (sortedData.length === 0) {
+    container.innerHTML = '<em>Inga händelser hittades för vald tidsperiod.</em>';
+    return;
+  }
+
+  sortedData.forEach((item, index) => {
+    const isFuel = item.kategori === 'Drivmedel';
+    const amountInput = parseNum(item.belopp);
+    const matar = parseNum(item.matarstallning);
+    const liter = parseNum(item.liter);
+    const formattedDate = formatDate(item.datum);
+    const totalCost = isFuel ? (amountInput * liter) : amountInput;
+
+    let consumptionText = '-';
+    if (isFuel) {
+      const fuelMatch = calculatedFuelData.find(f => f.datum === formattedDate);
+      if (fuelMatch && fuelMatch.consumption) {
+        consumptionText = `${fuelMatch.consumption.replace('.', ',')} L/mil`;
+      }
     }
-}
 
-function renderAccordionList(calculatedFuelData) {
-    const container = document.getElementById('history-accordion-list');
-    if (!container) return;
+    const card = document.createElement('div');
+    card.className = 'history-card';
+    card.onclick = () => toggleAccordion(index);
 
-    const sortedData = [...currentData].sort((a, b) => new Date(b.datum || 0) - new Date(a.datum || 0));
-
-    container.innerHTML = '';
-
-    sortedData.forEach((item, index) => {
-        const isFuel = item.kategori === 'Drivmedel';
-        const amountInput = parseNum(item.belopp);
-        const matar = parseNum(item.matarstallning);
-        const liter = parseNum(item.liter);
-        const formattedDate = formatDate(item.datum);
-        const totalCost = isFuel ? (amountInput * liter): amountInput;
-
-        let consumptionText = '-';
-        if (isFuel) {
-            const fuelMatch = calculatedFuelData.find(f => f.datum === formattedDate);
-            if (fuelMatch && fuelMatch.consumption) {
-                consumptionText = `${fuelMatch.consumption.replace('.', ',')} L/mil`;
-            }
-        }
-
-        const card = document.createElement('div');
-        card.className = 'history-card';
-        card.onclick = () => toggleAccordion(index);
-
-        card.innerHTML = `
-        <div class="history-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    card.innerHTML = `
+      <div class="history-card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-        <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
-        <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
+          <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
+          <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-        <strong style="font-size: 1.05rem; color: var(--primary-color);">${formatKr(totalCost)} kr</strong>
-        <button type="button" class="edit-btn" title="Redigera" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px;">✏️</button>
+          <strong style="font-size: 1.05rem; color: var(--primary-color);">${formatKr(totalCost)} kr</strong>
+          <button type="button" class="edit-btn" title="Redigera" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px;">✏️</button>
         </div>
-        </div>
+      </div>
 
-        <div id="accordion-content-${index}" class="history-card-details" style="display: none;">
-        ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${formatKm(matar)} km</div>`: ''}
-        ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>`: ''}
-        ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${formatKr(amountInput)} kr/L</div>`: ''}
-        ${isFuel ? `<div><strong>Förbrukning:</strong> ${consumptionText}</div>`: ''}
-        ${item.anteckning ? `<div style="margin-top: 4px; color: #64748b;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>`: ''}
-        </div>
-        `;
+      <div id="accordion-content-${index}" class="history-card-details" style="display: none;">
+        ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${formatKm(matar)} km</div>` : ''}
+        ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>` : ''}
+        ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${formatKr(amountInput)} kr/L</div>` : ''}
+        ${isFuel ? `<div><strong>Förbrukning:</strong> ${consumptionText}</div>` : ''}
+        ${item.anteckning ? `<div style="margin-top: 4px; color: #64748b;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>` : ''}
+      </div>
+    `;
 
+    const editBtn = card.querySelector('.edit-btn');
+    editBtn.onclick = (e) => {
+      e.stopPropagation();
+      editItem(item);
+    };
 
-        // Koppla klick på penn-ikonen till redigeringsfunktionen
-        const editBtn = card.querySelector('.edit-btn');
-        editBtn.onclick = (e) => {
-            e.stopPropagation(); // Förhindra att fällas ut/in när man klickar på pennan
-            editItem(item);
-        };
-
-        container.appendChild(card);
-    });
+    container.appendChild(card);
+  });
 }
 
-// Återställer formuläret till nyregistrering
-function resetForm() {
-    editingRowIndex = null;
-    const carForm = document.getElementById('car-form');
-    if (carForm) carForm.reset();
-
-    const datumInput = document.getElementById('datum');
-    if (datumInput) datumInput.valueAsDate = new Date();
-
-    toggleFuelInput();
-
-    const submitBtn = document.getElementById('submit-btn');
-    if (submitBtn) submitBtn.innerText = "Spara händelse";
-
-    const cancelBtn = document.getElementById('cancel-btn');
-    if (cancelBtn) cancelBtn.style.display = 'none';
-
-    // Gå tillbaka till historiken
-    const historyBtn = document.querySelectorAll('.tab-btn')[2];
-    switchTab('history', {
-        currentTarget: historyBtn
-    });
-}
-
-// Uppdaterad editItem (visar Avbryt-knappen när man redigerar)
-function editItem(item) {
-    editingRowIndex = item.rowIndex || null;
-
-    document.getElementById('datum').value = formatDate(item.datum);
-    document.getElementById('matarstallning').value = item.matarstallning;
-    document.getElementById('kategori').value = item.kategori;
-
-    toggleFuelInput();
-
-    document.getElementById('belopp').value = item.belopp;
-    document.getElementById('liter').value = item.liter || '';
-    document.getElementById('anteckning').value = item.anteckning || '';
-
-    const submitBtn = document.getElementById('submit-btn');
-    if (submitBtn) submitBtn.innerText = "Uppdatera händelse";
-
-    // Visa avbryt-knappen
-    const cancelBtn = document.getElementById('cancel-btn');
-    if (cancelBtn) cancelBtn.style.display = 'block';
-
-    const inputTabBtn = document.querySelectorAll('.tab-btn')[1];
-    switchTab('input', {
-        currentTarget: inputTabBtn
-    });
-
-    showToast("Ändra uppgifterna och klicka på 'Uppdatera händelse'");
-}
 
 // ----------------------------------------------------
 // FORMULÄRHANTERING OCH TOAST
