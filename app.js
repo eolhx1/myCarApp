@@ -534,16 +534,6 @@ function showToast(message, isError = false) {
 // ----------------------------------------------------
 // BESIKTNING
 // ----------------------------------------------------
-function dismissInspectionReminder(lastInspectionDateStr) {
-    // Spara senaste besiktningsdatumet som döljts i localStorage
-    localStorage.setItem('inspection_dismissed_for_date', lastInspectionDateStr);
-
-    const inspectionContainer = document.getElementById('inspection-reminder');
-    if (inspectionContainer) {
-        inspectionContainer.style.display = 'none';
-    }
-}
-
 function checkInspectionStatus() {
     const inspectionContainer = document.getElementById('inspection-reminder');
     if (!inspectionContainer) return;
@@ -551,7 +541,7 @@ function checkInspectionStatus() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Filter på alla besiktningar med giltigt datum
+    // Hämta alla besiktningar från datan
     const inspectionEntries = currentData
         .filter(item => item.kategori === 'Besiktning' && item.datum)
         .map(item => {
@@ -565,10 +555,16 @@ function checkInspectionStatus() {
         return;
     }
 
-    // 1. Kolla om det finns en framtida bokad besiktning i datan
+    // 1. Kolla om det finns en framtida bokad besiktning i datan (datum > idag)
     const hasFutureBooking = inspectionEntries.some(e => e.parsedDate > today);
 
-    // 2. Hitta den senaste GENOMFÖRDA besiktningen (datum <= idag)
+    // 2. Om en framtida besiktning redan är registrerad -> Dölj påminnelsen överallt
+    if (hasFutureBooking) {
+        inspectionContainer.style.display = 'none';
+        return;
+    }
+
+    // 3. Hitta den senaste GENOMFÖRDA besiktningen (datum <= idag)
     const lastPassedInspection = inspectionEntries.find(e => e.parsedDate <= today);
 
     if (!lastPassedInspection) {
@@ -578,14 +574,14 @@ function checkInspectionStatus() {
 
     const lastInspectionDateStr = formatDate(lastPassedInspection.parsedDate);
 
-    // Beräkna sista datum (14 månader efter senaste genomförda besiktning)
+    // Beräkna sista giltiga datum (14 månader efter senaste genomförda besiktning)
     const dueDate = new Date(lastPassedInspection.parsedDate);
     dueDate.setMonth(dueDate.getMonth() + 14);
 
     const diffTime = dueDate - today;
     const daysLeft = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-    // 3. Om datumet har passerats -> VISA RÖD VARNING (Går ej att dölja med knapp)
+    // 4. Om förfallodatumet har passerats utan ny besiktning -> VISA RÖD VARNING
     if (daysLeft <= 0) {
         inspectionContainer.style.display = 'block';
         inspectionContainer.innerHTML = `
@@ -599,20 +595,7 @@ function checkInspectionStatus() {
         return;
     }
 
-    // 4. Om tiden ÄR BOKAD som en framtida händelse i datan -> Släck påminnelsen
-    if (hasFutureBooking) {
-        inspectionContainer.style.display = 'none';
-        return;
-    }
-
-    // 5. Kontrollera om användaren har stängt påminnelsen för denna besiktningsperiod
-    const dismissedForDate = localStorage.getItem('inspection_dismissed_for_date');
-    if (dismissedForDate === lastInspectionDateStr) {
-        inspectionContainer.style.display = 'none';
-        return;
-    }
-
-    // 6. Normal påminnelse om det är 90 dagar eller mindre kvar
+    // 5. Påminnelse om det är 90 dagar eller mindre kvar
     const NOTICE_WINDOW_DAYS = 90;
 
     if (daysLeft <= NOTICE_WINDOW_DAYS) {
@@ -633,8 +616,8 @@ function checkInspectionStatus() {
                     Senaste besiktning var <strong>${lastInspectionDateStr}</strong>.<br>
                     Sista dag för besiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).
                 </div>
-                <button onclick="dismissInspectionReminder('${lastInspectionDateStr}')" style="background-color: ${statusColor}; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
-                    Jag har bokat tid – Dölj påminnelse
+                <button onclick="quickBookInspection()" style="background-color: ${statusColor}; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
+                    Registrera bokad tid
                 </button>
             </div>
         `;
@@ -642,6 +625,19 @@ function checkInspectionStatus() {
         inspectionContainer.style.display = 'none';
     }
 }
+
+// Hjälpfunktion för att hoppa till formuläret och förfylla "Besiktning"
+function quickBookInspection() {
+    switchTab('input');
+    
+    // Förfyll formuläret med Besiktning som kategori
+    const kategoriSelect = document.getElementById('kategori');
+    if (kategoriSelect) {
+        kategoriSelect.value = 'Besiktning';
+        toggleFuelInput();
+    }
+}
+
 
 // ----------------------------------------------------
 // HJÄLPFUNKTIONER
