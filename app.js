@@ -534,10 +534,9 @@ function showToast(message, isError = false) {
 // ----------------------------------------------------
 // BESIKTNING
 // ----------------------------------------------------
-function dismissInspectionReminder() {
-    // Spara dagens datum i localStorage så att påminnelsen hålls döljd idag
-    const todayStr = new Date().toISOString().split('T')[0];
-    localStorage.setItem('inspection_dismissed_date', todayStr);
+function dismissInspectionReminder(lastInspectionDateStr) {
+    // Spara senaste besiktningsdatumet som döljts i localStorage
+    localStorage.setItem('inspection_dismissed_for_date', lastInspectionDateStr);
 
     const inspectionContainer = document.getElementById('inspection-reminder');
     if (inspectionContainer) {
@@ -551,7 +550,6 @@ function checkInspectionStatus() {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
 
     // Filter på alla besiktningar med giltigt datum
     const inspectionEntries = currentData
@@ -577,6 +575,8 @@ function checkInspectionStatus() {
         inspectionContainer.style.display = 'none';
         return;
     }
+
+    const lastInspectionDateStr = formatDate(lastPassedInspection.parsedDate);
 
     // Beräkna sista datum (14 månader efter senaste genomförda besiktning)
     const dueDate = new Date(lastPassedInspection.parsedDate);
@@ -605,9 +605,9 @@ function checkInspectionStatus() {
         return;
     }
 
-    // 5. Kontrollera om användaren klickat på knappen idag
-    const dismissedDate = localStorage.getItem('inspection_dismissed_date');
-    if (dismissedDate === todayStr) {
+    // 5. Kontrollera om användaren har stängt påminnelsen för denna besiktningsperiod
+    const dismissedForDate = localStorage.getItem('inspection_dismissed_for_date');
+    if (dismissedForDate === lastInspectionDateStr) {
         inspectionContainer.style.display = 'none';
         return;
     }
@@ -630,11 +630,11 @@ function checkInspectionStatus() {
             <div style="background-color: ${statusColor}15; border-left: 4px solid ${statusColor}; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #1e293b;">
                 <div style="font-weight: bold; margin-bottom: 4px; color: ${statusColor};">${statusTitle}</div>
                 <div style="font-size: 0.9em; line-height: 1.4; margin-bottom: 10px;">
-                    Senaste besiktning var <strong>${formatDate(lastPassedInspection.parsedDate)}</strong>.<br>
+                    Senaste besiktning var <strong>${lastInspectionDateStr}</strong>.<br>
                     Sista dag för besiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).
                 </div>
-                <button onclick="dismissInspectionReminder()" style="background-color: ${statusColor}; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
-                    ✓ Kontrollbesiktning är bokad
+                <button onclick="dismissInspectionReminder('${lastInspectionDateStr}')" style="background-color: ${statusColor}; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
+                    Jag har bokat tid – Dölj påminnelse
                 </button>
             </div>
         `;
@@ -642,9 +642,6 @@ function checkInspectionStatus() {
         inspectionContainer.style.display = 'none';
     }
 }
-
-
-
 
 // ----------------------------------------------------
 // HJÄLPFUNKTIONER
