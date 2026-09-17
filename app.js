@@ -534,72 +534,115 @@ function showToast(message, isError = false) {
 // ----------------------------------------------------
 // BESIKTNING
 // ----------------------------------------------------
-// Beräknar nästa besiktning och varnar i god tid innan förfallodatumet
+function dismissInspectionReminder() {
+    // Spara dagens datum i localStorage så att påminnelsen hålls döljd idag
+    const todayStr = new Date().toISOString().split('T')[0];
+    localStorage.setItem('inspection_dismissed_date', todayStr);
+
+    const inspectionContainer = document.getElementById('inspection-reminder');
+    if (inspectionContainer) {
+        inspectionContainer.style.display = 'none';
+    }
+}
+
 function checkInspectionStatus() {
     const inspectionContainer = document.getElementById('inspection-reminder');
     if (!inspectionContainer) return;
 
-    // Hitta senaste händelsen med kategorin 'Besiktning'
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Filter på alla besiktningar med giltigt datum
     const inspectionEntries = currentData
         .filter(item => item.kategori === 'Besiktning' && item.datum)
-        .sort((a, b) => new Date(b.datum) - new Date(a.datum));
+        .map(item => {
+            const [y, m, d] = formatDate(item.datum).split('-').map(Number);
+            return { ...item, parsedDate: new Date(y, m - 1, d) };
+        })
+        .sort((a, b) => b.parsedDate - a.parsedDate);
 
     if (inspectionEntries.length === 0) {
         inspectionContainer.style.display = 'none';
         return;
     }
 
-    // Skapa datum i lokal tid för att undvika UTC-förskjutningar
-    const rawDateStr = formatDate(inspectionEntries[0].datum);
-    const [year, month, day] = rawDateStr.split('-').map(Number);
-    const lastInspectionDate = new Date(year, month - 1, day);
-    
-    // Förfallodatumet är exakt 14 månader efter senaste besiktning
-    const dueDate = new Date(lastInspectionDate);
+    // 1. Kolla om det finns en framtida bokad besiktning i datan
+    const hasFutureBooking = inspectionEntries.some(e => e.parsedDate > today);
+
+    // 2. Hitta den senaste GENOMFÖRDA besiktningen (datum <= idag)
+    const lastPassedInspection = inspectionEntries.find(e => e.parsedDate <= today);
+
+    if (!lastPassedInspection) {
+        inspectionContainer.style.display = 'none';
+        return;
+    }
+
+    // Beräkna sista datum (14 månader efter senaste genomförda besiktning)
+    const dueDate = new Date(lastPassedInspection.parsedDate);
     dueDate.setMonth(dueDate.getMonth() + 14);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Jämför enbart datum, inte klockslag
-    
-    // Beräkna antal dagar kvar till förfallodatumet
     const diffTime = dueDate - today;
     const daysLeft = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-    // BÖRJA VARNA NÄR DET ÄR 90 DAGAR (CA 3 MÅNADER) KVAR TILL FÖRFALLODATUMET
+    // 3. Om datumet har passerats -> VISA RÖD VARNING (Går ej att dölja med knapp)
+    if (daysLeft <= 0) {
+        inspectionContainer.style.display = 'block';
+        inspectionContainer.innerHTML = `
+            <div style="background-color: #ef444415; border-left: 4px solid #ef4444; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #1e293b;">
+                <div style="font-weight: bold; margin-bottom: 4px; color: #ef4444;">🚨 VARNING: Besiktningen har förfallit!</div>
+                <div style="font-size: 0.9em; line-height: 1.4;">
+                    Sista besiktningsdatum var <strong>${formatDate(dueDate)}</strong> (${Math.abs(daysLeft)} dagar sedan). Boka/genomför besiktning omgående!
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // 4. Om tiden ÄR BOKAD som en framtida händelse i datan -> Släck påminnelsen
+    if (hasFutureBooking) {
+        inspectionContainer.style.display = 'none';
+        return;
+    }
+
+    // 5. Kontrollera om användaren klickat på knappen idag
+    const dismissedDate = localStorage.getItem('inspection_dismissed_date');
+    if (dismissedDate === todayStr) {
+        inspectionContainer.style.display = 'none';
+        return;
+    }
+
+    // 6. Normal påminnelse om det är 90 dagar eller mindre kvar
     const NOTICE_WINDOW_DAYS = 90;
 
     if (daysLeft <= NOTICE_WINDOW_DAYS) {
         inspectionContainer.style.display = 'block';
-        
-        let statusColor = '#eab308'; // Gul/Orange varning (Dags att boka)
+
+        let statusColor = '#eab308'; // Gul/Orange
         let statusTitle = "🚗 Dags att boka besiktning!";
-        let statusText = `Senaste besiktning var <strong>${formatDate(lastInspectionDate)}</strong>.<br>` +
-                         `Sista dag för besiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).`;
-        
-        // Om det är väldigt kort om tid kvar (mindre än 14 dagar)
-        if (daysLeft > 0 && daysLeft <= 14) {
-            statusColor = '#f97316'; // Mörkorange/Brådskande
+
+        if (daysLeft <= 14) {
+            statusColor = '#f97316'; // Mörkorange (Brådskande)
             statusTitle = "⚠️ Brådskande: Boka besiktning!";
-        }
-        // Om förfallodatumet redan har passerats
-        else if (daysLeft <= 0) {
-            statusColor = '#ef4444'; // Röd varning (Körförbud/Försenad)
-            statusTitle = "🚨 VARNING: Besiktningen har förfallit!";
-            statusText = `Sista besiktningsdatum var <strong>${formatDate(dueDate)}</strong> (` +
-                         `${Math.abs(daysLeft)} dagar sedan). Boka tid omgående!`;
         }
 
         inspectionContainer.innerHTML = `
             <div style="background-color: ${statusColor}15; border-left: 4px solid ${statusColor}; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #1e293b;">
                 <div style="font-weight: bold; margin-bottom: 4px; color: ${statusColor};">${statusTitle}</div>
-                <div style="font-size: 0.9em; line-height: 1.4;">${statusText}</div>
+                <div style="font-size: 0.9em; line-height: 1.4; margin-bottom: 10px;">
+                    Senaste besiktning var <strong>${formatDate(lastPassedInspection.parsedDate)}</strong>.<br>
+                    Sista dag för besiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).
+                </div>
+                <button onclick="dismissInspectionReminder()" style="background-color: ${statusColor}; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
+                    ✓ Kontrollbesiktning är bokad
+                </button>
             </div>
         `;
     } else {
-        // Om det är mer än 90 dagar kvar döljs rutan
         inspectionContainer.style.display = 'none';
     }
 }
+
 
 
 
