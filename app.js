@@ -100,12 +100,14 @@ async function loadData() {
         if (result.status === "success") {
             currentData = result.data || [];
             renderDashboard();
+            initHistoryFilterUI(); // Skapar årskryssrutorna för historikfiltret
             renderHistory();
         }
     } catch (error) {
         console.error("Fel vid hämtning:", error);
     }
 }
+
 
 // ----------------------------------------------------
 // DASHBOARD
@@ -144,6 +146,10 @@ function renderDashboard() {
         </div>
         `;
     }
+
+    // Kontrollera besiktning
+    checkInspectionStatus();
+
 
     // 2. Fyll i tidsperiodsväljaren (12 månader + specifika år)
     const yearSelect = document.getElementById('year-select');
@@ -373,23 +379,6 @@ function renderHistory() {
         calculatedFuelData);
 }
 
-// Komplettera loadData() så att filtret initieras vid dataladdning
-async function loadData() {
-    try {
-        const response = await fetch(API_URL);
-        const result = await response.json();
-
-        if (result.status === "success") {
-            currentData = result.data || [];
-            renderDashboard();
-            initHistoryFilterUI(); // Skapar årskryssrutorna
-            renderHistory();
-        }
-    } catch (error) {
-        console.error("Fel vid hämtning:", error);
-    }
-}
-
 function renderAccordionList(filteredData, calculatedFuelData) {
     const container = document.getElementById('history-accordion-list');
     if (!container) return;
@@ -540,6 +529,79 @@ function showToast(message, isError = false) {
         toast.classList.remove('show');
     }, 3000);
 }
+
+
+// ----------------------------------------------------
+// BESIKTNING
+// ----------------------------------------------------
+// Beräknar nästa besiktning och varnar i god tid innan förfallodatumet
+function checkInspectionStatus() {
+    const inspectionContainer = document.getElementById('inspection-reminder');
+    if (!inspectionContainer) return;
+
+    // Hitta senaste händelsen med kategorin 'Besiktning'
+    const inspectionEntries = currentData
+        .filter(item => item.kategori === 'Besiktning' && item.datum)
+        .sort((a, b) => new Date(b.datum) - new Date(a.datum));
+
+    if (inspectionEntries.length === 0) {
+        inspectionContainer.style.display = 'none';
+        return;
+    }
+
+    // Skapa datum i lokal tid för att undvika UTC-förskjutningar
+    const rawDateStr = formatDate(inspectionEntries[0].datum);
+    const [year, month, day] = rawDateStr.split('-').map(Number);
+    const lastInspectionDate = new Date(year, month - 1, day);
+    
+    // Förfallodatumet är exakt 14 månader efter senaste besiktning
+    const dueDate = new Date(lastInspectionDate);
+    dueDate.setMonth(dueDate.getMonth() + 14);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Jämför enbart datum, inte klockslag
+    
+    // Beräkna antal dagar kvar till förfallodatumet
+    const diffTime = dueDate - today;
+    const daysLeft = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    // BÖRJA VARNA NÄR DET ÄR 90 DAGAR (CA 3 MÅNADER) KVAR TILL FÖRFALLODATUMET
+    const NOTICE_WINDOW_DAYS = 90;
+
+    if (daysLeft <= NOTICE_WINDOW_DAYS) {
+        inspectionContainer.style.display = 'block';
+        
+        let statusColor = '#eab308'; // Gul/Orange varning (Dags att boka)
+        let statusTitle = "🚗 Dags att boka besiktning!";
+        let statusText = `Senaste besiktning var <strong>${formatDate(lastInspectionDate)}</strong>.<br>` +
+                         `Sista dag för besiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).`;
+        
+        // Om det är väldigt kort om tid kvar (mindre än 14 dagar)
+        if (daysLeft > 0 && daysLeft <= 14) {
+            statusColor = '#f97316'; // Mörkorange/Brådskande
+            statusTitle = "⚠️ Brådskande: Boka besiktning!";
+        }
+        // Om förfallodatumet redan har passerats
+        else if (daysLeft <= 0) {
+            statusColor = '#ef4444'; // Röd varning (Körförbud/Försenad)
+            statusTitle = "🚨 VARNING: Besiktningen har förfallit!";
+            statusText = `Sista besiktningsdatum var <strong>${formatDate(dueDate)}</strong> (` +
+                         `${Math.abs(daysLeft)} dagar sedan). Boka tid omgående!`;
+        }
+
+        inspectionContainer.innerHTML = `
+            <div style="background-color: ${statusColor}15; border-left: 4px solid ${statusColor}; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #1e293b;">
+                <div style="font-weight: bold; margin-bottom: 4px; color: ${statusColor};">${statusTitle}</div>
+                <div style="font-size: 0.9em; line-height: 1.4;">${statusText}</div>
+            </div>
+        `;
+    } else {
+        // Om det är mer än 90 dagar kvar döljs rutan
+        inspectionContainer.style.display = 'none';
+    }
+}
+
+
 
 // ----------------------------------------------------
 // HJÄLPFUNKTIONER
