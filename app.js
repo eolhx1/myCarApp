@@ -541,7 +541,7 @@ function checkInspectionStatus() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Hämta alla besiktningar från datan
+    // Filter på alla besiktningshändelser med giltigt datum
     const inspectionEntries = currentData
         .filter(item => item.kategori === 'Besiktning' && item.datum)
         .map(item => {
@@ -555,17 +555,15 @@ function checkInspectionStatus() {
         return;
     }
 
-    // 1. Kolla om det finns en framtida bokad besiktning i datan (datum > idag)
-    const hasFutureBooking = inspectionEntries.some(e => e.parsedDate > today);
+    // Senaste registrerade händelsen inom Besiktning
+    const latestEntry = inspectionEntries[0];
 
-    // 2. Om en framtida besiktning redan är registrerad -> Dölj påminnelsen överallt
-    if (hasFutureBooking) {
-        inspectionContainer.style.display = 'none';
-        return;
-    }
+    // 1. Om den senaste noteringen är "Bokat kontrollbesiktning" -> Dölj påminnelsen
+    const isBookingRegistered = latestEntry.anteckning && 
+                                latestEntry.anteckning.toLowerCase().includes('bokat');
 
-    // 3. Hitta den senaste GENOMFÖRDA besiktningen (datum <= idag)
-    const lastPassedInspection = inspectionEntries.find(e => e.parsedDate <= today);
+    // Hitta den senaste faktiskt GENOMFÖRDA besiktningen (som har pris eller inte är bara en bokningsnotering)
+    const lastPassedInspection = inspectionEntries.find(e => !e.anteckning || !e.anteckning.toLowerCase().includes('bokat'));
 
     if (!lastPassedInspection) {
         inspectionContainer.style.display = 'none';
@@ -581,7 +579,7 @@ function checkInspectionStatus() {
     const diffTime = dueDate - today;
     const daysLeft = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-    // 4. Om förfallodatumet har passerats utan ny besiktning -> VISA RÖD VARNING
+    // 2. Om förfallodatumet har passerats utan ny genomförd besiktning -> VISA RÖD VARNING
     if (daysLeft <= 0) {
         inspectionContainer.style.display = 'block';
         inspectionContainer.innerHTML = `
@@ -595,7 +593,13 @@ function checkInspectionStatus() {
         return;
     }
 
-    // 5. Påminnelse om det är 90 dagar eller mindre kvar
+    // 3. Om bokning redan är registrerad för denna period -> Dölj påminnelsen
+    if (isBookingRegistered) {
+        inspectionContainer.style.display = 'none';
+        return;
+    }
+
+    // 4. Påminnelse om det är 90 dagar eller mindre kvar
     const NOTICE_WINDOW_DAYS = 90;
 
     if (daysLeft <= NOTICE_WINDOW_DAYS) {
@@ -616,8 +620,8 @@ function checkInspectionStatus() {
                     Senaste besiktning var <strong>${lastInspectionDateStr}</strong>.<br>
                     Sista dag för besiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).
                 </div>
-                <button onclick="quickBookInspection()" style="background-color: ${statusColor}; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
-                    Registrera bokad tid
+                <button id="btn-dismiss-inspection" onclick="saveInspectionBooking()" style="background-color: ${statusColor}; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
+                    Jag har bokat tid – Dölj påminnelse
                 </button>
             </div>
         `;
@@ -625,6 +629,7 @@ function checkInspectionStatus() {
         inspectionContainer.style.display = 'none';
     }
 }
+
 
 // Hjälpfunktion för att hoppa till formuläret och förfylla "Besiktning"
 function quickBookInspection() {
@@ -779,4 +784,47 @@ function resetForm() {
 
     const submitBtn = document.getElementById('submit-btn');
     if (submitBtn) submitBtn.innerText = "Spara händelse";
+}
+
+// Registrerar att kontrollbesiktning är bokad i Google Sheets
+async function saveInspectionBooking() {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const bookingData = {
+        datum: todayStr,
+        kategori: 'Besiktning',
+        belopp: 0,
+        korstracka: '',
+        anteckning: 'Bokat kontrollbesiktning'
+    };
+
+    try {
+        // Visa enkel indikering på knappen
+        const btn = document.getElementById('btn-dismiss-inspection');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = 'Sparar...';
+        }
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(bookingData)
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            // Ladda om datan så att UI och historik uppdateras direkt
+            await loadData();
+        } else {
+            alert('Kunde inte spara bokningen: ' + (result.message || 'Okänt fel'));
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Jag har bokat tid – Dölj påminnelse';
+            }
+        }
+    } catch (error) {
+        console.error('Fel vid sparning av bokning:', error);
+        alert('Ett fel uppstod vid kommunikation med servern.');
+    }
 }
