@@ -147,7 +147,7 @@ function renderDashboard() {
         `;
     }
 
-    // Kontrollera besiktning
+    // Kontrollera kontrollbesiktning
     checkInspectionStatus();
 
 
@@ -532,7 +532,7 @@ function showToast(message, isError = false) {
 
 
 // ----------------------------------------------------
-// BESIKTNING
+// KONTROLLBESIKTNING
 // ----------------------------------------------------
 function checkInspectionStatus() {
     const inspectionContainer = document.getElementById('inspection-reminder');
@@ -541,9 +541,9 @@ function checkInspectionStatus() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Filter på alla besiktningshändelser med giltigt datum
+    // Filter på alla kontrollbesiktningshändelser med giltigt datum
     const inspectionEntries = currentData
-        .filter(item => item.kategori === 'Besiktning' && item.datum)
+        .filter(item => item.kategori === 'kontrollbesiktning' && item.datum)
         .map(item => {
             const [y, m, d] = formatDate(item.datum).split('-').map(Number);
             return { ...item, parsedDate: new Date(y, m - 1, d) };
@@ -555,14 +555,14 @@ function checkInspectionStatus() {
         return;
     }
 
-    // Senaste registrerade händelsen inom Besiktning
+    // Senaste registrerade händelsen inom kontrollbesiktning
     const latestEntry = inspectionEntries[0];
 
     // 1. Om den senaste noteringen är "Bokat kontrollbesiktning" -> Dölj påminnelsen
     const isBookingRegistered = latestEntry.anteckning && 
                                 latestEntry.anteckning.toLowerCase().includes('bokat');
 
-    // Hitta den senaste faktiskt GENOMFÖRDA besiktningen (som har pris eller inte är bara en bokningsnotering)
+    // Hitta den senaste faktiskt GENOMFÖRDA kontrollbesiktningen (som har pris eller inte är bara en bokningsnotering)
     const lastPassedInspection = inspectionEntries.find(e => !e.anteckning || !e.anteckning.toLowerCase().includes('bokat'));
 
     if (!lastPassedInspection) {
@@ -572,21 +572,21 @@ function checkInspectionStatus() {
 
     const lastInspectionDateStr = formatDate(lastPassedInspection.parsedDate);
 
-    // Beräkna sista giltiga datum (14 månader efter senaste genomförda besiktning)
+    // Beräkna sista giltiga datum (14 månader efter senaste genomförda kontrollbesiktning)
     const dueDate = new Date(lastPassedInspection.parsedDate);
     dueDate.setMonth(dueDate.getMonth() + 14);
 
     const diffTime = dueDate - today;
     const daysLeft = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-    // 2. Om förfallodatumet har passerats utan ny genomförd besiktning -> VISA RÖD VARNING
+    // 2. Om förfallodatumet har passerats utan ny genomförd kontrollbesiktning -> VISA RÖD VARNING
     if (daysLeft <= 0) {
         inspectionContainer.style.display = 'block';
         inspectionContainer.innerHTML = `
             <div style="background-color: #ef444415; border-left: 4px solid #ef4444; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #1e293b;">
-                <div style="font-weight: bold; margin-bottom: 4px; color: #ef4444;">🚨 VARNING: Besiktningen har förfallit!</div>
+                <div style="font-weight: bold; margin-bottom: 4px; color: #ef4444;">🚨 VARNING: Kontrollbesiktningen har förfallit!</div>
                 <div style="font-size: 0.9em; line-height: 1.4;">
-                    Sista besiktningsdatum var <strong>${formatDate(dueDate)}</strong> (${Math.abs(daysLeft)} dagar sedan). Boka/genomför besiktning omgående!
+                    Sista kontrollbesiktningdatun var <strong>${formatDate(dueDate)}</strong> (${Math.abs(daysLeft)} dagar sedan). Boka/genomför kontrollbesiktning omgående!
                 </div>
             </div>
         `;
@@ -606,19 +606,19 @@ function checkInspectionStatus() {
         inspectionContainer.style.display = 'block';
 
         let statusColor = '#eab308'; // Gul/Orange
-        let statusTitle = "🚗 Dags att boka besiktning!";
+        let statusTitle = "🚗 Dags att boka kontrollbesiktning!";
 
         if (daysLeft <= 14) {
             statusColor = '#f97316'; // Mörkorange (Brådskande)
-            statusTitle = "⚠️ Brådskande: Boka besiktning!";
+            statusTitle = "⚠️ Brådskande: Boka kontrollbesiktning!";
         }
 
         inspectionContainer.innerHTML = `
             <div style="background-color: ${statusColor}15; border-left: 4px solid ${statusColor}; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #1e293b;">
                 <div style="font-weight: bold; margin-bottom: 4px; color: ${statusColor};">${statusTitle}</div>
                 <div style="font-size: 0.9em; line-height: 1.4; margin-bottom: 10px;">
-                    Senaste besiktning var <strong>${lastInspectionDateStr}</strong>.<br>
-                    Sista dag för besiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).
+                    Senaste kontrollbesiktningen var <strong>${lastInspectionDateStr}</strong>.<br>
+                    Sista dag för kontrollbesiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).
                 </div>
                 <button id="btn-dismiss-inspection" onclick="saveInspectionBooking()" style="background-color: ${statusColor}; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
                     Jag har bokat tid – Dölj påminnelse
@@ -631,14 +631,14 @@ function checkInspectionStatus() {
 }
 
 
-// Hjälpfunktion för att hoppa till formuläret och förfylla "Besiktning"
+// Hjälpfunktion för att hoppa till formuläret och förfylla "kontrollbesiktning"
 function quickBookInspection() {
     switchTab('input');
     
-    // Förfyll formuläret med Besiktning som kategori
+    // Förfyll formuläret med kontrollbesiktning som kategori
     const kategoriSelect = document.getElementById('kategori');
     if (kategoriSelect) {
-        kategoriSelect.value = 'Besiktning';
+        kategoriSelect.value = 'kontrollbesiktning';
         toggleFuelInput();
     }
 }
@@ -792,7 +792,7 @@ async function saveInspectionBooking() {
 
     const bookingData = {
         datum: todayStr,
-        kategori: 'Besiktning',
+        kategori: 'kontrollbesiktning',
         belopp: 0,
         korstracka: '',
         anteckning: 'Bokat kontrollbesiktning'
