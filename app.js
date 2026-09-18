@@ -534,6 +534,48 @@ function showToast(message, isError = false) {
 // ----------------------------------------------------
 // KONTROLLBESIKTNING
 // ----------------------------------------------------
+
+// Registrerar att kontrollbesiktning är bokad i Google Sheets
+async function saveInspectionBooking() {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const bookingData = {
+        datum: todayStr,
+        kategori: 'Kontrollbesiktning',
+        belopp: 0,
+        korstracka: '',
+        anteckning: 'Bokat kontrollbesiktning'
+    };
+
+    try {
+        const btn = document.getElementById('btn-dismiss-inspection');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = 'Sparar...';
+        }
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(bookingData)
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            await loadData();
+        } else {
+            alert('Kunde inte spara bokningen: ' + (result.message || 'Okänt fel'));
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Jag har bokat tid – Dölj påminnelse';
+            }
+        }
+    } catch (error) {
+        console.error('Fel vid sparning av bokning:', error);
+        alert('Ett fel uppstod vid kommunikation med servern.');
+    }
+}
+
 function checkInspectionStatus() {
     const inspectionContainer = document.getElementById('inspection-reminder');
     if (!inspectionContainer) return;
@@ -541,9 +583,9 @@ function checkInspectionStatus() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Filter på alla kontrollbesiktningshändelser med giltigt datum
+    // Stödjer både 'Kontrollbesiktning' och äldre rader med 'Besiktning'
     const inspectionEntries = currentData
-        .filter(item => item.kategori === 'kontrollbesiktning' && item.datum)
+        .filter(item => (item.kategori === 'Kontrollbesiktning' || item.kategori === 'Besiktning') && item.datum)
         .map(item => {
             const [y, m, d] = formatDate(item.datum).split('-').map(Number);
             return { ...item, parsedDate: new Date(y, m - 1, d) };
@@ -555,14 +597,14 @@ function checkInspectionStatus() {
         return;
     }
 
-    // Senaste registrerade händelsen inom kontrollbesiktning
+    // Senaste registrerade händelsen inom besiktning
     const latestEntry = inspectionEntries[0];
 
     // 1. Om den senaste noteringen är "Bokat kontrollbesiktning" -> Dölj påminnelsen
     const isBookingRegistered = latestEntry.anteckning && 
                                 latestEntry.anteckning.toLowerCase().includes('bokat');
 
-    // Hitta den senaste faktiskt GENOMFÖRDA kontrollbesiktningen (som har pris eller inte är bara en bokningsnotering)
+    // Hitta den senaste GENOMFÖRDA besiktningen
     const lastPassedInspection = inspectionEntries.find(e => !e.anteckning || !e.anteckning.toLowerCase().includes('bokat'));
 
     if (!lastPassedInspection) {
@@ -572,28 +614,28 @@ function checkInspectionStatus() {
 
     const lastInspectionDateStr = formatDate(lastPassedInspection.parsedDate);
 
-    // Beräkna sista giltiga datum (14 månader efter senaste genomförda kontrollbesiktning)
+    // Beräkna sista giltiga datum (14 månader efter senaste genomförda besiktning)
     const dueDate = new Date(lastPassedInspection.parsedDate);
     dueDate.setMonth(dueDate.getMonth() + 14);
 
     const diffTime = dueDate - today;
     const daysLeft = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-    // 2. Om förfallodatumet har passerats utan ny genomförd kontrollbesiktning -> VISA RÖD VARNING
+    // 2. Om förfallodatumet har passerats utan ny genomförd besiktning -> VISA RÖD VARNING
     if (daysLeft <= 0) {
         inspectionContainer.style.display = 'block';
         inspectionContainer.innerHTML = `
             <div style="background-color: #ef444415; border-left: 4px solid #ef4444; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #1e293b;">
                 <div style="font-weight: bold; margin-bottom: 4px; color: #ef4444;">🚨 VARNING: Kontrollbesiktningen har förfallit!</div>
                 <div style="font-size: 0.9em; line-height: 1.4;">
-                    Sista kontrollbesiktningdatun var <strong>${formatDate(dueDate)}</strong> (${Math.abs(daysLeft)} dagar sedan). Boka/genomför kontrollbesiktning omgående!
+                    Sista besiktningsdatum var <strong>${formatDate(dueDate)}</strong> (${Math.abs(daysLeft)} dagar sedan). Boka/genomför kontrollbesiktning omgående!
                 </div>
             </div>
         `;
         return;
     }
 
-    // 3. Om bokning redan är registrerad för denna period -> Dölj påminnelsen
+    // 3. Om bokning redan är registrerad -> Dölj påminnelsen
     if (isBookingRegistered) {
         inspectionContainer.style.display = 'none';
         return;
@@ -617,7 +659,7 @@ function checkInspectionStatus() {
             <div style="background-color: ${statusColor}15; border-left: 4px solid ${statusColor}; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #1e293b;">
                 <div style="font-weight: bold; margin-bottom: 4px; color: ${statusColor};">${statusTitle}</div>
                 <div style="font-size: 0.9em; line-height: 1.4; margin-bottom: 10px;">
-                    Senaste kontrollbesiktningen var <strong>${lastInspectionDateStr}</strong>.<br>
+                    Senaste kontrollbesiktning var <strong>${lastInspectionDateStr}</strong>.<br>
                     Sista dag för kontrollbesiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).
                 </div>
                 <button id="btn-dismiss-inspection" onclick="saveInspectionBooking()" style="background-color: ${statusColor}; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
@@ -630,15 +672,12 @@ function checkInspectionStatus() {
     }
 }
 
-
-// Hjälpfunktion för att hoppa till formuläret och förfylla "kontrollbesiktning"
 function quickBookInspection() {
     switchTab('input');
     
-    // Förfyll formuläret med kontrollbesiktning som kategori
     const kategoriSelect = document.getElementById('kategori');
     if (kategoriSelect) {
-        kategoriSelect.value = 'kontrollbesiktning';
+        kategoriSelect.value = 'Kontrollbesiktning';
         toggleFuelInput();
     }
 }
