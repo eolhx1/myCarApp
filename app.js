@@ -149,14 +149,14 @@ function handleCarChange() {
 }
 
 function getCarFilteredData() {
-    if (selectedCar === 'ALL') {
+    if (!selectedCar || selectedCar === 'ALL') {
         return currentData;
     }
     return currentData.filter(item => {
         if (!item.bil) return false;
         const cleanItemCar = String(item.bil).replace(/\s+/g, '').toUpperCase();
         const cleanSelectedCar = String(selectedCar).replace(/\s+/g, '').toUpperCase();
-        return cleanItemCar === cleanSelectedCar;
+        return cleanSelectedCar.includes(cleanItemCar) || cleanItemCar.includes(cleanSelectedCar);
     });
 }
 
@@ -213,6 +213,8 @@ function renderDashboard() {
 
     // 5. Beräkna sammanställning för vald period
     renderYearSummary();
+    
+    checkInspectionStatus();
 }
 
 // ----------------------------------------------------
@@ -253,14 +255,25 @@ function renderYearSummary() {
 
     if (selectedValue === '12m') {
         const twelveMonthsAgo = new Date();
-        twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
-        filteredEntries = carData.filter(item => item.datum && new Date(item.datum) >= twelveMonthsAgo);
+        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+        twelveMonthsAgo.setHours(0, 0, 0, 0);
+
+        filteredEntries = carData.filter(item => {
+            if (!item.datum) return false;
+            const d = new Date(String(item.datum).replace(/-/g, '/'));
+            return !isNaN(d.getTime()) && d >= twelveMonthsAgo;
+        });
         periodLabel = "Totalt senaste 12 mån";
     } else {
         const selectedYear = parseInt(selectedValue);
-        filteredEntries = carData.filter(item => item.datum && new Date(item.datum).getFullYear() === selectedYear);
+        filteredEntries = carData.filter(item => {
+            if (!item.datum) return false;
+            const d = new Date(String(item.datum).replace(/-/g, '/'));
+            return !isNaN(d.getTime()) && d.getFullYear() === selectedYear;
+        });
         periodLabel = `Totalt ${selectedYear}`;
     }
+
 
     const totals = {};
     let periodTotal = 0;
