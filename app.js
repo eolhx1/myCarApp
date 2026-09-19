@@ -214,7 +214,7 @@ function renderDashboard() {
 // DYNAMISK ÅRS-DROPDOWN
 // ----------------------------------------------------
 function populateYearSelect(carEvents) {
-    const select = document.getElementById('time-period-select') || document.getElementById('year-select');
+const select = document.getElementById('time-period-select') || document.getElementById('year-select');
     if (!select) return;
 
     const currentVal = select.value;
