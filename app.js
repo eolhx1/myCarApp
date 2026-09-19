@@ -57,7 +57,8 @@ function switchTab(tabName, event) {
         setTimeout(() => {
             if (priceChartInstance) priceChartInstance.resize();
             if (consumptionChartInstance) consumptionChartInstance.resize();
-        }, 50);
+        },
+            50);
     }
 }
 
@@ -74,7 +75,7 @@ function toggleFuelInput() {
     const isFuel = (kategori === 'Drivmedel');
     const isOdometerRequired = (kategori === 'Drivmedel' || kategori === 'Service');
 
-    if (literGroup) literGroup.style.display = isFuel ? 'block' : 'none';
+    if (literGroup) literGroup.style.display = isFuel ? 'block': 'none';
     if (!isFuel && literInput) literInput.value = '';
 
     if (beloppLabel && beloppInput) {
@@ -89,7 +90,7 @@ function toggleFuelInput() {
 
     if (matarInput) matarInput.required = isOdometerRequired;
     if (matarLabel) {
-        matarLabel.innerText = isOdometerRequired ? "Mätarställning (km) *" : "Mätarställning (km)";
+        matarLabel.innerText = isOdometerRequired ? "Mätarställning (km) *": "Mätarställning (km)";
     }
 }
 
@@ -164,21 +165,21 @@ function renderDashboard() {
         const isFuel = latest.kategori === 'Drivmedel';
         const unitPrice = parseNum(latest.belopp);
         const liter = parseNum(latest.liter);
-        const totalCost = isFuel ? (unitPrice * liter) : unitPrice;
+        const totalCost = isFuel ? (unitPrice * liter): unitPrice;
         const matar = parseNum(latest.korstracka || latest.matarstallning);
 
         latestContainer.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong>${latest.kategori} ${latest.bil ? `(${latest.bil})` : ''}</strong>
-            <span style="font-size: 0.9em; color: #666;">${formatDate(latest.datum)}</span>
+        <strong>${latest.kategori} ${latest.bil ? `(${latest.bil})`: ''}</strong>
+        <span style="font-size: 0.9em; color: #666;">${formatDate(latest.datum)}</span>
         </div>
         <div style="font-size: 1.3em; font-weight: bold; margin: 6px 0; color: #2563eb;">
-            ${formatKr(totalCost)} kr ${isFuel ? `<small style="font-size: 0.7em; font-weight: normal; color: #555;">(${formatKr(unitPrice)} kr/L)</small>` : ''}
+        ${formatKr(totalCost)} kr ${isFuel ? `<small style="font-size: 0.7em; font-weight: normal; color: #555;">(${formatKr(unitPrice)} kr/L)</small>`: ''}
         </div>
         <div style="font-size: 0.9em; color: #444;">
-            ${matar > 0 ? `Mätarställning: <strong>${formatKm(matar)} km</strong>` : ''}
-            ${liter > 0 ? `<br>Volym: <strong>${liter} L</strong>` : ''}
-            ${latest.anteckning ? `<br><em>${latest.anteckning}</em>` : ''}
+        ${matar > 0 ? `Mätarställning: <strong>${formatKm(matar)} km</strong>`: ''}
+        ${liter > 0 ? `<br>Volym: <strong>${liter} L</strong>`: ''}
+        ${latest.anteckning ? `<br><em>${latest.anteckning}</em>`: ''}
         </div>
         `;
     }
@@ -189,8 +190,8 @@ function renderDashboard() {
     const yearSelect = document.getElementById('year-select');
     if (yearSelect) {
         const years = [...new Set(carData.map(item => new Date(item.datum).getFullYear()))]
-            .filter(y => !isNaN(y))
-            .sort((a, b) => b - a);
+        .filter(y => !isNaN(y))
+        .sort((a, b) => b - a);
 
         let optionsHtml = `<option value="12m">Senaste 12 månaderna</option>`;
         optionsHtml += years.map(y => `<option value="${y}">${y}</option>`).join('');
@@ -231,7 +232,7 @@ function renderYearSummary() {
         const isFuel = cat === 'Drivmedel';
         const amount = parseNum(item.belopp);
         const liter = parseNum(item.liter);
-        const totalAmount = isFuel ? (amount * liter) : amount;
+        const totalAmount = isFuel ? (amount * liter): amount;
 
         totals[cat] = (totals[cat] || 0) + totalAmount;
         periodTotal += totalAmount;
@@ -246,14 +247,14 @@ function renderYearSummary() {
     for (const [cat, sum] of Object.entries(totals)) {
         html += `
         <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
-            <span>${cat}</span>
-            <strong>${formatKr(sum)} kr</strong>
+        <span>${cat}</span>
+        <strong>${formatKr(sum)} kr</strong>
         </li>`;
     }
     html += `
     <li style="display: flex; justify-content: space-between; padding: 10px 0 0 0; font-weight: bold; font-size: 1.05em; border-top: 2px solid #ccc; margin-top: 5px;">
-        <span>${periodLabel}</span>
-        <span>${formatKr(periodTotal)} kr</span>
+    <span>${periodLabel}</span>
+    <span>${formatKr(periodTotal)} kr</span>
     </li>
     </ul>`;
 
@@ -267,7 +268,7 @@ function renderYearSummary() {
 function toggleFilterDropdown() {
     const dropdown = document.getElementById('history-filter-dropdown');
     if (dropdown) {
-        dropdown.style.display = (dropdown.style.display === 'none' || dropdown.style.display === '') ? 'block' : 'none';
+        dropdown.style.display = (dropdown.style.display === 'none' || dropdown.style.display === '') ? 'block': 'none';
     }
 }
 
@@ -285,15 +286,15 @@ function initHistoryFilterUI() {
     if (!container || !carData || carData.length === 0) return;
 
     const years = [...new Set(carData.map(item => new Date(item.datum).getFullYear()))]
-        .filter(y => !isNaN(y))
-        .sort((a, b) => b - a);
+    .filter(y => !isNaN(y))
+    .sort((a, b) => b - a);
 
     let html = '';
     years.forEach(year => {
         html += `
         <label style="display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; color: #334155;">
-            <input type="checkbox" class="filter-year-cb" value="${year}" onchange="handleFilterChange('year')">
-            ${year}
+        <input type="checkbox" class="filter-year-cb" value="${year}" onchange="handleFilterChange('year')">
+        ${year}
         </label>`;
     });
 
@@ -328,7 +329,7 @@ function updateCheckboxStates() {
     yearCbs.forEach(cb => {
         cb.disabled = cb12m.checked;
         if (cb.parentElement) {
-            cb.parentElement.style.opacity = cb12m.checked ? '0.5' : '1';
+            cb.parentElement.style.opacity = cb12m.checked ? '0.5': '1';
         }
     });
 
@@ -336,10 +337,10 @@ function updateCheckboxStates() {
         if (btnText) btnText.innerText = "Senaste 12 månaderna";
     } else {
         const selectedYears = Array.from(yearCbs)
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
         if (btnText) {
-            btnText.innerText = selectedYears.length > 0 ? `År: ${selectedYears.join(', ')}` : "Välj tidsperiod";
+            btnText.innerText = selectedYears.length > 0 ? `År: ${selectedYears.join(', ')}`: "Välj tidsperiod";
         }
     }
 }
@@ -357,8 +358,8 @@ function getFilteredData() {
         return carData.filter(item => item.datum && new Date(item.datum) >= twelveMonthsAgo);
     } else {
         const selectedYears = Array.from(yearCbs)
-            .filter(cb => cb.checked)
-            .map(cb => parseInt(cb.value));
+        .filter(cb => cb.checked)
+        .map(cb => parseInt(cb.value));
 
         if (selectedYears.length === 0) return carData;
         return carData.filter(item => item.datum && selectedYears.includes(new Date(item.datum).getFullYear()));
@@ -369,14 +370,14 @@ function renderHistory() {
     const filteredData = getFilteredData();
 
     const fuelEntries = filteredData
-        .map(entry => ({
-            ...entry,
-            pricePerLiter: parseNum(entry.belopp),
-            literNum: parseNum(entry.liter),
-            matarNum: parseNum(entry.korstracka || entry.matarstallning)
-        }))
-        .filter(e => e.kategori === 'Drivmedel' && e.literNum > 0 && e.matarNum > 0 && e.datum)
-        .sort((a, b) => new Date(a.datum) - new Date(b.datum));
+    .map(entry => ({
+        ...entry,
+        pricePerLiter: parseNum(entry.belopp),
+        literNum: parseNum(entry.liter),
+        matarNum: parseNum(entry.korstracka || entry.matarstallning)
+    }))
+    .filter(e => e.kategori === 'Drivmedel' && e.literNum > 0 && e.matarNum > 0 && e.datum)
+    .sort((a, b) => new Date(a.datum) - new Date(b.datum));
 
     const calculatedFuelData = fuelEntries.map((e, index) => {
         let consumption = null;
@@ -395,7 +396,8 @@ function renderHistory() {
     });
 
     renderCharts(calculatedFuelData);
-    renderAccordionList(filteredData, calculatedFuelData);
+    renderAccordionList(filteredData,
+        calculatedFuelData);
 }
 
 function renderAccordionList(filteredData, calculatedFuelData) {
@@ -417,7 +419,7 @@ function renderAccordionList(filteredData, calculatedFuelData) {
         const matar = parseNum(item.korstracka || item.matarstallning);
         const liter = parseNum(item.liter);
         const formattedDate = formatDate(item.datum);
-        const totalCost = isFuel ? (amountInput * liter) : amountInput;
+        const totalCost = isFuel ? (amountInput * liter): amountInput;
 
         let consumptionText = '-';
         if (isFuel) {
@@ -433,22 +435,22 @@ function renderAccordionList(filteredData, calculatedFuelData) {
 
         card.innerHTML = `
         <div class="history-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
-                <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <strong style="font-size: 1.05rem; color: var(--primary-color);">${formatKr(totalCost)} kr</strong>
-                <button type="button" class="edit-btn" title="Redigera" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px;">✏️</button>
-            </div>
+        <div>
+        <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
+        <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+        <strong style="font-size: 1.05rem; color: var(--primary-color);">${formatKr(totalCost)} kr</strong>
+        <button type="button" class="edit-btn" title="Redigera" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px;">✏️</button>
+        </div>
         </div>
 
         <div id="accordion-content-${index}" class="history-card-details" style="display: none;">
-            ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${formatKm(matar)} km</div>` : ''}
-            ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>` : ''}
-            ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${formatKr(amountInput)} kr/L</div>` : ''}
-            ${isFuel ? `<div><strong>Förbrukning:</strong> ${consumptionText}</div>` : ''}
-            ${item.anteckning ? `<div style="margin-top: 4px; color: #64748b;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>` : ''}
+        ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${formatKm(matar)} km</div>`: ''}
+        ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>`: ''}
+        ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${formatKr(amountInput)} kr/L</div>`: ''}
+        ${isFuel ? `<div><strong>Förbrukning:</strong> ${consumptionText}</div>`: ''}
+        ${item.anteckning ? `<div style="margin-top: 4px; color: #64748b;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>`: ''}
         </div>
         `;
 
@@ -478,7 +480,7 @@ if (carForm) {
         const liter = document.getElementById('liter').value;
         const anteckning = document.getElementById('anteckning').value;
         const formCarSelect = document.getElementById('form-car-select');
-        const carVal = formCarSelect ? formCarSelect.value : '';
+        const carVal = formCarSelect ? formCarSelect.value: '';
 
         if (!editingRowIndex) {
             const isDuplicate = currentData.some(item =>
@@ -497,10 +499,11 @@ if (carForm) {
 
         const submitBtn = document.getElementById('submit-btn');
         submitBtn.disabled = true;
-        submitBtn.innerText = editingRowIndex ? "Uppdaterar..." : "Sparar...";
+        submitBtn.innerText = editingRowIndex ? "Uppdaterar...": "Sparar...";
 
         const payload = {
-            action: "CREATE",
+            action: editingRowIndex ? "UPDATE": "CREATE",
+            rowIndex: editingRowIndex,
             datum,
             matarstallning,
             kategori,
@@ -519,7 +522,7 @@ if (carForm) {
             const result = await response.json();
 
             if (result.status === 'success') {
-                showToast(editingRowIndex ? "Händelsen har uppdaterats!" : "Händelsen har sparats!");
+                showToast(editingRowIndex ? "Händelsen har uppdaterats!": "Händelsen har sparats!");
                 resetForm();
                 await loadData();
             } else {
@@ -563,7 +566,7 @@ async function saveInspectionBooking() {
         belopp: 0,
         korstracka: '',
         anteckning: 'Bokat kontrollbesiktning',
-        bil: selectedCar !== 'ALL' ? selectedCar : (formCarSelect ? formCarSelect.value : '')
+        bil: selectedCar !== 'ALL' ? selectedCar: (formCarSelect ? formCarSelect.value: '')
     };
 
     try {
@@ -604,12 +607,14 @@ function checkInspectionStatus() {
 
     const filteredData = getCarFilteredData();
     const inspectionEntries = filteredData
-        .filter(item => (item.kategori === 'Kontrollbesiktning' || item.kategori === 'Besiktning') && item.datum)
-        .map(item => {
-            const [y, m, d] = formatDate(item.datum).split('-').map(Number);
-            return { ...item, parsedDate: new Date(y, m - 1, d) };
-        })
-        .sort((a, b) => b.parsedDate - a.parsedDate);
+    .filter(item => (item.kategori === 'Kontrollbesiktning' || item.kategori === 'Besiktning') && item.datum)
+    .map(item => {
+        const [y, m, d] = formatDate(item.datum).split('-').map(Number);
+        return {
+            ...item, parsedDate: new Date(y, m - 1, d)
+        };
+    })
+    .sort((a, b) => b.parsedDate - a.parsedDate);
 
     if (inspectionEntries.length === 0) {
         inspectionContainer.style.display = 'none';
@@ -636,10 +641,10 @@ function checkInspectionStatus() {
         inspectionContainer.style.display = 'block';
         inspectionContainer.innerHTML = `
         <div style="background-color: #ef444415; border-left: 4px solid #ef4444; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #1e293b;">
-            <div style="font-weight: bold; margin-bottom: 4px; color: #ef4444;">🚨 VARNING: Kontrollbesiktningen har förfallit!</div>
-            <div style="font-size: 0.9em; line-height: 1.4;">
-                Sista besiktningsdatum var <strong>${formatDate(dueDate)}</strong> (${Math.abs(daysLeft)} dagar sedan). Boka/genomför kontrollbesiktning omgående!
-            </div>
+        <div style="font-weight: bold; margin-bottom: 4px; color: #ef4444;">🚨 VARNING: Kontrollbesiktningen har förfallit!</div>
+        <div style="font-size: 0.9em; line-height: 1.4;">
+        Sista besiktningsdatum var <strong>${formatDate(dueDate)}</strong> (${Math.abs(daysLeft)} dagar sedan). Boka/genomför kontrollbesiktning omgående!
+        </div>
         </div>`;
         return;
     }
@@ -664,14 +669,14 @@ function checkInspectionStatus() {
 
         inspectionContainer.innerHTML = `
         <div style="background-color: ${statusColor}15; border-left: 4px solid ${statusColor}; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #1e293b;">
-            <div style="font-weight: bold; margin-bottom: 4px; color: ${statusColor};">${statusTitle}</div>
-            <div style="font-size: 0.9em; line-height: 1.4; margin-bottom: 10px;">
-                Senaste kontrollbesiktning var <strong>${lastInspectionDateStr}</strong>.<br>
-                Sista dag för kontrollbesiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).
-            </div>
-            <button id="btn-dismiss-inspection" onclick="saveInspectionBooking()" style="background-color: ${statusColor}; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
-                Jag har bokat tid – Dölj påminnelse
-            </button>
+        <div style="font-weight: bold; margin-bottom: 4px; color: ${statusColor};">${statusTitle}</div>
+        <div style="font-size: 0.9em; line-height: 1.4; margin-bottom: 10px;">
+        Senaste kontrollbesiktning var <strong>${lastInspectionDateStr}</strong>.<br>
+        Sista dag för kontrollbesiktning: <strong>${formatDate(dueDate)}</strong> (${daysLeft} dagar kvar).
+        </div>
+        <button id="btn-dismiss-inspection" onclick="saveInspectionBooking()" style="background-color: ${statusColor}; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer;">
+        Jag har bokat tid – Dölj påminnelse
+        </button>
         </div>`;
     } else {
         inspectionContainer.style.display = 'none';
@@ -691,7 +696,7 @@ function formatKr(val) {
 
 function formatKm(val) {
     const num = parseNum(val);
-    return num > 0 ? num.toLocaleString('sv-SE') : '';
+    return num > 0 ? num.toLocaleString('sv-SE'): '';
 }
 
 
@@ -702,7 +707,7 @@ function toggleAccordion(index) {
     const content = document.getElementById(`accordion-content-${index}`);
     if (content) {
         const isVisible = content.style.display === 'block';
-        content.style.display = isVisible ? 'none' : 'block';
+        content.style.display = isVisible ? 'none': 'block';
     }
 }
 
@@ -714,7 +719,7 @@ function renderCharts(fuelData) {
 
     const labels = fuelData.map(d => d.datum);
     const priceValues = fuelData.map(d => parseFloat(d.pricePerLiter));
-    const consValues = fuelData.map(d => d.consumption ? parseFloat(d.consumption) : null);
+    const consValues = fuelData.map(d => d.consumption ? parseFloat(d.consumption): null);
 
     if (priceChartInstance) priceChartInstance.destroy();
     priceChartInstance = new Chart(priceCtx, {
@@ -734,8 +739,16 @@ function renderCharts(fuelData) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: false } }
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
         }
     });
 
@@ -758,8 +771,16 @@ function renderCharts(fuelData) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: false } }
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
         }
     });
 }
@@ -786,6 +807,10 @@ function editItem(item) {
     const submitBtn = document.getElementById('submit-btn');
     if (submitBtn) submitBtn.innerText = "Uppdatera händelse";
 
+    // VISA AVBRYT-KNAPPEN
+    const cancelBtn = document.getElementById('cancel-btn');
+    if (cancelBtn) cancelBtn.style.display = "block";
+
     switchTab('input');
 }
 
@@ -801,4 +826,162 @@ function resetForm() {
 
     const submitBtn = document.getElementById('submit-btn');
     if (submitBtn) submitBtn.innerText = "Spara händelse";
+
+    // DÖLJ AVBRYT-KNAPPEN
+    const cancelBtn = document.getElementById('cancel-btn');
+    if (cancelBtn) cancelBtn.style.display = "none";
+}
+
+// =≈==================================================
+// MODAL & BILHANTERING
+// =≈==================================================
+
+function openCarModal() {
+    const modal = document.getElementById('car-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        renderModalCarsList();
+    }
+}
+
+function closeCarModal() {
+    const modal = document.getElementById('car-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        resetCarModalForm();
+    }
+}
+
+// Rendera listan över bilar inne i modalen med knappar för Redigera och Ta bort
+function renderModalCarsList() {
+    const listContainer = document.getElementById('modal-cars-list');
+    if (!listContainer) return;
+
+    if (currentCars.length === 0) {
+        listContainer.innerHTML = '<em>Inga bilar registrerade ännu.</em>';
+        return;
+    }
+
+    let html = '';
+    currentCars.forEach(car => {
+        html += `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: white; margin-bottom: 6px; border-radius: 4px;">
+        <div>
+        <strong>${car.regnr}</strong> ${car.modell ? `(${car.modell})`: ''}
+        <div style="font-size: 0.8em; color: #64748b;">
+        ${car.arsmodell ? `Årsmodell: ${car.arsmodell}`: ''}
+        ${car.intervalMil ? `| Service: ${car.intervalMil} mil`: ''}
+        </div>
+        </div>
+        <div style="display: flex; gap: 6px;">
+        <button type="button" onclick="editCarInModal('${car.regnr}')" style="background: none; border: none; cursor: pointer; font-size: 1.1rem;">✏️</button>
+        <button type="button" onclick="deleteCarFromModal('${car.regnr}')" style="background: none; border: none; cursor: pointer; font-size: 1.1rem;">🗑️</button>
+        </div>
+        </div>`;
+    });
+
+    listContainer.innerHTML = html;
+}
+
+// Skicka nytt lägg till/uppdatera bil till Apps Script
+async function handleCarFormSubmit(event) {
+    event.preventDefault();
+
+    const originalRegnr = document.getElementById('car-edit-original-regnr').value;
+    const regnr = document.getElementById('modal-regnr').value.trim();
+    const modell = document.getElementById('modal-modell').value.trim();
+    const arsmodell = document.getElementById('modal-arsmodell').value.trim();
+    const intervalMil = document.getElementById('modal-interval-mil').value.trim();
+    const intervalManader = document.getElementById('modal-interval-manader').value.trim();
+
+    const action = originalRegnr ? "UPDATE_CAR": "ADD_CAR";
+
+    const payload = {
+        action,
+        originalRegnr,
+        regnr,
+        modell,
+        arsmodell,
+        intervalMil,
+        intervalManader
+    };
+
+    const submitBtn = document.getElementById('modal-car-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Sparar...";
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            showToast(originalRegnr ? "Bilen har uppdaterats!": "Bilen har lagts till!");
+            resetCarModalForm();
+            await loadData();
+            renderModalCarsList();
+        } else {
+            showToast("Fel vid sparning av bil.", true);
+        }
+    } catch (error) {
+        console.error("Fel vid sparning av bil:", error);
+        showToast("Ett fel uppstod.", true);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Spara bil";
+    }
+}
+
+// Fyll i formuläret i modalen när man trycker på redigera
+function editCarInModal(regnr) {
+    const car = currentCars.find(c => c.regnr === regnr);
+    if (!car) return;
+
+    document.getElementById('car-edit-original-regnr').value = car.regnr;
+    document.getElementById('modal-regnr').value = car.regnr;
+    document.getElementById('modal-modell').value = car.modell || '';
+    document.getElementById('modal-arsmodell').value = car.arsmodell || '';
+    document.getElementById('modal-interval-mil').value = car.intervalMil || '';
+    document.getElementById('modal-interval-manader').value = car.intervalManader || '';
+
+    document.getElementById('car-form-title').innerText = "Redigera bil";
+    document.getElementById('modal-car-cancel-btn').style.display = "block";
+}
+
+// Återställ bilformuläret i modalen
+function resetCarModalForm() {
+    document.getElementById('car-edit-original-regnr').value = '';
+    document.getElementById('modal-car-form').reset();
+    document.getElementById('car-form-title').innerText = "Lägg till ny bil";
+    document.getElementById('modal-car-cancel-btn').style.display = "none";
+}
+
+// Ta bort bil
+async function deleteCarFromModal(regnr) {
+    if (!confirm(`Är du säker på att du vill ta bort bilen "${regnr}"?`)) return;
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: "DELETE_CAR", regnr
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            showToast("Bilen har tagits bort!");
+            await loadData();
+            renderModalCarsList();
+        } else {
+            showToast("Kunde inte ta bort bilen.", true);
+        }
+    } catch (error) {
+        console.error("Fel vid borttagning av bil:", error);
+        showToast("Ett fel uppstod.", true);
+    }
 }
