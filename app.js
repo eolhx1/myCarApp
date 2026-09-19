@@ -17,8 +17,21 @@ let editingRowIndex = null; // Håller reda på om vi redigerar en rad
 document.addEventListener('DOMContentLoaded', () => {
     const datumInput = document.getElementById('datum');
     if (datumInput) datumInput.valueAsDate = new Date();
+
+    // Koppla händelser för val av bil och tidsperiod
+    const globalSelect = document.getElementById('global-car-select');
+    if (globalSelect) {
+        globalSelect.addEventListener('change', handleCarChange);
+    }
+
+    const timeSelect = document.getElementById('time-period-select') || document.getElementById('year-select');
+    if (timeSelect) {
+        timeSelect.addEventListener('change', renderYearSummary);
+    }
+
     loadData();
 });
+
 
 // Hämta data från Google Sheets (Bilar + Loggbok)
 async function loadData() {
@@ -99,11 +112,11 @@ function parseNum(val) {
     if (typeof val === 'number') return val;
     // Ta bort "kr", mellanslag och ersätt komma med punkt
     const cleaned = String(val)
-        .replace(/kr/gi, '')
-        .replace(/\s+/g, '')
-        .replace(',', '.');
+    .replace(/kr/gi, '')
+    .replace(/\s+/g, '')
+    .replace(',', '.');
     const num = parseFloat(cleaned);
-    return isNaN(num) ? 0 : num;
+    return isNaN(num) ? 0: num;
 }
 
 
@@ -154,11 +167,12 @@ function getCarFilteredData() {
     }
     return currentData.filter(item => {
         if (!item.bil) return false;
-        const cleanItemCar = String(item.bil).replace(/\s+/g, '').toUpperCase();
-        const cleanSelectedCar = String(selectedCar).replace(/\s+/g, '').toUpperCase();
-        return cleanSelectedCar.includes(cleanItemCar) || cleanItemCar.includes(cleanSelectedCar);
+        const cleanItemCar = String(item.bil).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+        const cleanSelectedCar = String(selectedCar).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+        return cleanItemCar === cleanSelectedCar;
     });
 }
+
 
 
 // ----------------------------------------------------
@@ -184,24 +198,24 @@ function renderDashboard() {
             let totalCost = rawAmount;
             let unitPriceText = '';
 
-            if (isFuel && liter > 0 && rawAmount < 50) { 
+            if (isFuel && liter > 0 && rawAmount < 50) {
                 totalCost = rawAmount * liter;
                 unitPriceText = `<small style="font-size: 0.7em; color: #555;">(${formatKr(rawAmount)} kr/L)</small>`;
             }
 
             latestContainer.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong>${latest.kategori} ${latest.bil ? `(${latest.bil})` : ''}</strong>
-                    <span style="font-size: 0.9em; color: #666;">${formatDate(latest.datum)}</span>
-                </div>
-                <div style="font-size: 1.3em; font-weight: bold; margin: 6px 0; color: #2563eb;">
-                    ${formatKr(totalCost)} kr ${unitPriceText}
-                </div>
-                <div style="font-size: 0.9em; color: #444;">
-                    ${matar > 0 ? `Mätarställning: <strong>${formatKm(matar)} km</strong>` : ''}
-                    ${liter > 0 ? `<br>Volym: <strong>${liter} L</strong>` : ''}
-                    ${latest.anteckning ? `<br><em>${latest.anteckning}</em>` : ''}
-                </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong>${latest.kategori} ${latest.bil ? `(${latest.bil})`: ''}</strong>
+            <span style="font-size: 0.9em; color: #666;">${formatDate(latest.datum)}</span>
+            </div>
+            <div style="font-size: 1.3em; font-weight: bold; margin: 6px 0; color: #2563eb;">
+            ${formatKr(totalCost)} kr ${unitPriceText}
+            </div>
+            <div style="font-size: 0.9em; color: #444;">
+            ${matar > 0 ? `Mätarställning: <strong>${formatKm(matar)} km</strong>`: ''}
+            ${liter > 0 ? `<br>Volym: <strong>${liter} L</strong>`: ''}
+            ${latest.anteckning ? `<br><em>${latest.anteckning}</em>`: ''}
+            </div>
             `;
         } else {
             latestContainer.innerHTML = '<em>Inga händelser registrerade ännu.</em>';
@@ -213,7 +227,7 @@ function renderDashboard() {
 
     // 5. Beräkna sammanställning för vald period
     renderYearSummary();
-    
+
     checkInspectionStatus();
 }
 
@@ -221,7 +235,7 @@ function renderDashboard() {
 // DYNAMISK ÅRS-DROPDOWN
 // ----------------------------------------------------
 function populateYearSelect(carEvents) {
-const select = document.getElementById('time-period-select') || document.getElementById('year-select');
+    const select = document.getElementById('time-period-select') || document.getElementById('year-select');
     if (!select) return;
 
     const currentVal = select.value;
@@ -229,7 +243,7 @@ const select = document.getElementById('time-period-select') || document.getElem
     // Hämta alla unika år från datan (sorterat fallande: 2026, 2025, 2024...)
     const years = [...new Set(carEvents.map(e => {
         const d = new Date(e.datum);
-        return isNaN(d.getFullYear()) ? null : d.getFullYear();
+        return isNaN(d.getFullYear()) ? null: d.getFullYear();
     }))].filter(Boolean).sort((a, b) => b - a);
 
     let html = `<option value="12m">Senaste 12 månaderna</option>`;
@@ -260,9 +274,11 @@ function renderYearSummary() {
 
         filteredEntries = carData.filter(item => {
             if (!item.datum) return false;
-            const d = new Date(String(item.datum).replace(/-/g, '/'));
+            const cleanDateStr = formatDate(item.datum);
+            const d = new Date(cleanDateStr);
             return !isNaN(d.getTime()) && d >= twelveMonthsAgo;
         });
+
         periodLabel = "Totalt senaste 12 mån";
     } else {
         const selectedYear = parseInt(selectedValue);
@@ -283,9 +299,9 @@ function renderYearSummary() {
         const isFuel = cat === 'Drivmedel';
         const amount = parseNum(item.belopp);
         const liter = parseNum(item.liter);
-        
+
         // Om det är drivmedel och beloppet är literpris (< 50 kr)
-        const totalAmount = (isFuel && liter > 0 && amount < 50) ? (amount * liter) : amount;
+        const totalAmount = (isFuel && liter > 0 && amount < 50) ? (amount * liter): amount;
 
         totals[cat] = (totals[cat] || 0) + totalAmount;
         periodTotal += totalAmount;
