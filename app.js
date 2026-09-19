@@ -160,58 +160,60 @@ function getCarFilteredData() {
 // DASHBOARD
 // ----------------------------------------------------
 function renderDashboard() {
-    const activeCar = getActiveCar();
-    const carEvents = events.filter(e => e.bil === activeCar);
+    // 1. Filtrera data för den valda bilen
+    const carEvents = getCarFilteredData();
 
-    // Sortera händelser nyast först
+    // 2. Sortera händelser nyast först
     const sortedEvents = [...carEvents].sort((a, b) => new Date(b.datum) - new Date(a.datum));
     const latest = sortedEvents[0];
 
-    // 1. Senaste Händelsen
+    // 3. Senaste Händelsen
     const latestContainer = document.getElementById('latest-event-details');
-    if (latestContainer && latest) {
-        const isFuel = latest.kategori === 'Drivmedel';
-        const rawAmount = parseNum(latest.belopp);
-        const liter = parseNum(latest.liter);
-        const matar = parseNum(latest.korstracka || latest.matarstallning);
+    if (latestContainer) {
+        if (latest) {
+            const isFuel = latest.kategori === 'Drivmedel';
+            const rawAmount = parseNum(latest.belopp);
+            const liter = parseNum(latest.liter);
+            const matar = parseNum(latest.korstracka || latest.matarstallning);
 
-        // Om det är drivmedel OCH liter finns angivet är beloppet kr/liter
-        let totalCost = rawAmount;
-        let unitPriceText = '';
+            let totalCost = rawAmount;
+            let unitPriceText = '';
 
-        if (isFuel && liter > 0 && rawAmount < 50) { 
-            totalCost = rawAmount * liter;
-            unitPriceText = `<small style="font-size: 0.7em; color: #555;">(${formatKr(rawAmount)} kr/L)</small>`;
+            if (isFuel && liter > 0 && rawAmount < 50) { 
+                totalCost = rawAmount * liter;
+                unitPriceText = `<small style="font-size: 0.7em; color: #555;">(${formatKr(rawAmount)} kr/L)</small>`;
+            }
+
+            latestContainer.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong>${latest.kategori} ${latest.bil ? `(${latest.bil})` : ''}</strong>
+                    <span style="font-size: 0.9em; color: #666;">${formatDate(latest.datum)}</span>
+                </div>
+                <div style="font-size: 1.3em; font-weight: bold; margin: 6px 0; color: #2563eb;">
+                    ${formatKr(totalCost)} kr ${unitPriceText}
+                </div>
+                <div style="font-size: 0.9em; color: #444;">
+                    ${matar > 0 ? `Mätarställning: <strong>${formatKm(matar)} km</strong>` : ''}
+                    ${liter > 0 ? `<br>Volym: <strong>${liter} L</strong>` : ''}
+                    ${latest.anteckning ? `<br><em>${latest.anteckning}</em>` : ''}
+                </div>
+            `;
+        } else {
+            latestContainer.innerHTML = '<em>Inga händelser registrerade ännu.</em>';
         }
-
-        latestContainer.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <strong>${latest.kategori} ${latest.bil ? `(${latest.bil})` : ''}</strong>
-                <span style="font-size: 0.9em; color: #666;">${formatDate(latest.datum)}</span>
-            </div>
-            <div style="font-size: 1.3em; font-weight: bold; margin: 6px 0; color: #2563eb;">
-                ${formatKr(totalCost)} kr ${unitPriceText}
-            </div>
-            <div style="font-size: 0.9em; color: #444;">
-                ${matar > 0 ? `Mätarställning: <strong>${formatKm(matar)} km</strong>` : ''}
-                ${liter > 0 ? `<br>Volym: <strong>${liter} L</strong>` : ''}
-                ${latest.anteckning ? `<br><em>${latest.anteckning}</em>` : ''}
-            </div>
-        `;
     }
 
-    // 2. Uppdatera Års-dropdown dynamiskt efter datan
+    // 4. Uppdatera Års-dropdown dynamiskt efter datan
     populateYearSelect(carEvents);
 
-    // 3. Beräkna sammanställning för vald period
-    renderSummary(carEvents);
+    // 5. Beräkna sammanställning för vald period
+    renderYearSummary();
 }
 
 // ----------------------------------------------------
 // DYNAMISK ÅRS-DROPDOWN
 // ----------------------------------------------------
 function populateYearSelect(carEvents) {
-    // Kollar både efter time-period-select och year-select för att passa din HTML
     const select = document.getElementById('time-period-select') || document.getElementById('year-select');
     if (!select) return;
 
@@ -231,6 +233,7 @@ function populateYearSelect(carEvents) {
     select.innerHTML = html;
     if (currentVal) select.value = currentVal;
 }
+
 
 
 function renderYearSummary() {
