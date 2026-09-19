@@ -35,9 +35,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Hämta data från Google Sheets (Bilar + Loggbok)
 async function loadData() {
+    const debugBox = document.getElementById('debug-log');
+    function log(msg) {
+        if (debugBox) debugBox.innerText += msg + "\n";
+    }
+
     try {
+        log("Hämtar data från Google Apps Script...");
         const response = await fetch(API_URL);
         const result = await response.json();
+
+        log("Svar mottaget. Status: " + result.status);
+        log("Antal bilar: " + (result.cars ? result.cars.length : 0));
+        log("Antal händelser i data: " + (result.data ? result.data.length : 0));
+
+        if (result.data && result.data.length > 0) {
+            log("Första raden i data:\n" + JSON.stringify(result.data[0], null, 2));
+        } else {
+            log("VARNING: result.data är tom eller saknas helt!");
+        }
 
         if (result.status === "success") {
             currentCars = result.cars || [];
@@ -49,9 +65,10 @@ async function loadData() {
             renderHistory();
         }
     } catch (error) {
-        console.error("Fel vid hämtning:", error);
+        log("FEL VID HÄMTNING: " + error.message);
     }
 }
+
 
 function switchTab(tabName, event) {
     const tabs = document.querySelectorAll('.tab-content');
@@ -1052,4 +1069,8 @@ async function deleteCarFromModal(regnr) {
         console.error("Fel vid borttagning av bil:", error);
         showToast("Ett fel uppstod.", true);
     }
+    
+   <pre id="debug-log" style="background:#1e293b; color:#f8fafc; padding:12px; font-size:11px; max-height:250px; overflow:auto; margin:15px; border-radius:6px;"></pre>
+ 
+    
 }
