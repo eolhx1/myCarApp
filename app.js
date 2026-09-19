@@ -1069,8 +1069,6 @@ async function deleteCarFromModal(regnr) {
         console.error("Fel vid borttagning av bil:", error);
         showToast("Ett fel uppstod.", true);
     }
-    
-   <pre id="debug-log" style="background:#1e293b; color:#f8fafc; padding:12px; font-size:11px; max-height:250px; overflow:auto; margin:15px; border-radius:6px;"></pre>
- 
+
     
 }
