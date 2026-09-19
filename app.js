@@ -173,8 +173,6 @@ function getCarFilteredData() {
     });
 }
 
-
-
 // ----------------------------------------------------
 // DASHBOARD
 // ----------------------------------------------------
@@ -269,27 +267,29 @@ function renderYearSummary() {
 
     if (selectedValue === '12m') {
         const twelveMonthsAgo = new Date();
-        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+        twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
         twelveMonthsAgo.setHours(0, 0, 0, 0);
 
         filteredEntries = carData.filter(item => {
             if (!item.datum) return false;
-            const cleanDateStr = formatDate(item.datum);
-            const d = new Date(cleanDateStr);
-            return !isNaN(d.getTime()) && d >= twelveMonthsAgo;
+            // Skapa datum säkert utan tidszonsförskjutningar
+            const dateStr = formatDate(item.datum);
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const entryDate = new Date(y, m - 1, d);
+            return !isNaN(entryDate.getTime()) && entryDate >= twelveMonthsAgo;
         });
 
         periodLabel = "Totalt senaste 12 mån";
     } else {
-        const selectedYear = parseInt(selectedValue);
+        const selectedYear = parseInt(selectedValue, 10);
         filteredEntries = carData.filter(item => {
             if (!item.datum) return false;
-            const d = new Date(String(item.datum).replace(/-/g, '/'));
-            return !isNaN(d.getTime()) && d.getFullYear() === selectedYear;
+            const dateStr = formatDate(item.datum);
+            const [y] = dateStr.split('-').map(Number);
+            return y === selectedYear;
         });
         periodLabel = `Totalt ${selectedYear}`;
     }
-
 
     const totals = {};
     let periodTotal = 0;
@@ -300,8 +300,8 @@ function renderYearSummary() {
         const amount = parseNum(item.belopp);
         const liter = parseNum(item.liter);
 
-        // Om det är drivmedel och beloppet är literpris (< 50 kr)
-        const totalAmount = (isFuel && liter > 0 && amount < 50) ? (amount * liter): amount;
+        // Om det är drivmedel och beloppet anger literpris (< 50 kr)
+        const totalAmount = (isFuel && liter > 0 && amount < 50) ? (amount * liter) : amount;
 
         totals[cat] = (totals[cat] || 0) + totalAmount;
         periodTotal += totalAmount;
@@ -316,20 +316,19 @@ function renderYearSummary() {
     for (const [cat, sum] of Object.entries(totals)) {
         html += `
         <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
-        <span>${cat}</span>
-        <strong>${formatKr(sum)} kr</strong>
+            <span>${cat}</span>
+            <strong>${formatKr(sum)} kr</strong>
         </li>`;
     }
     html += `
     <li style="display: flex; justify-content: space-between; padding: 10px 0 0 0; font-weight: bold; font-size: 1.05em; border-top: 2px solid #ccc; margin-top: 5px;">
-    <span>${periodLabel}</span>
-    <span>${formatKr(periodTotal)} kr</span>
+        <span>${periodLabel}</span>
+        <span>${formatKr(periodTotal)} kr</span>
     </li>
     </ul>`;
 
     summaryContainer.innerHTML = html;
 }
-
 
 // ----------------------------------------------------
 // HISTORIK, FILTER & DIAGRAM
