@@ -152,7 +152,12 @@ function getCarFilteredData() {
     if (selectedCar === 'ALL') {
         return currentData;
     }
-    return currentData.filter(item => item.bil === selectedCar);
+    return currentData.filter(item => {
+        if (!item.bil) return false;
+        const cleanItemCar = String(item.bil).replace(/\s+/g, '').toUpperCase();
+        const cleanSelectedCar = String(selectedCar).replace(/\s+/g, '').toUpperCase();
+        return cleanItemCar === cleanSelectedCar;
+    });
 }
 
 
