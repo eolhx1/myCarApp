@@ -44,6 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modalCarForm) {
         modalCarForm.addEventListener('submit', handleCarFormSubmit);
     }
+    
+    // Aktivera svep-navigering
+    initSwipeNavigation();
 
     loadData();
 });
@@ -1001,7 +1004,6 @@ function renderModalCarsList() {
 }
 
 // Skicka nytt lägg till/uppdatera bil till Apps Script
-// Skicka nytt lägg till/uppdatera bil till Apps Script
 async function handleCarFormSubmit(event) {
     event.preventDefault();
 
@@ -1104,6 +1106,78 @@ async function deleteCarFromModal(regnr) {
         console.error("Fel vid borttagning av bil:", error);
         showToast("Ett fel uppstod.", true);
     }
+}
 
-    
+
+// =≈==================================================
+// SVAJP
+// =≈==================================================
+// Listan över dina flikar i den ordning du vill att man sveper mellan dem
+const TABS_ORDER = ['dashboard', 'input', 'history']; 
+
+let touchStartX = 0;
+let touchStartY = 0;
+
+// Initiera lyssnare för svep-gester
+function initSwipeNavigation() {
+    const mainContainer = document.querySelector('main') || document.body;
+
+    mainContainer.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    mainContainer.addEventListener('touchend', (e) => {
+        const touchEndX = e.changedTouches[0].screenX;
+        const touchEndY = e.changedTouches[0].screenY;
+
+        handleSwipeGesture(touchStartX, touchStartY, touchEndX, touchEndY);
+    }, { passive: true });
+}
+
+function handleSwipeGesture(startX, startY, endX, endY) {
+    const diffX = endX - startX;
+    const diffY = endY - startY;
+
+    // Tröskelvärde: fingret måste flyttas minst 60px horisontellt
+    const SWIPE_THRESHOLD = 60;
+
+    // Se till att rörelsen huvudsakligen är horisontell (så vi inte byter flik när man scrollar vertikalt)
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > SWIPE_THRESHOLD) {
+        
+        // Hitta vilken flik som är aktiv just nu
+        const activeTab = document.querySelector('.tab-content[style*="display: block"]') || document.getElementById('tab-dashboard');
+        const activeTabId = activeTab ? activeTab.id.replace('tab-', '') : 'dashboard';
+
+        let currentIndex = TABS_ORDER.indexOf(activeTabId);
+        if (currentIndex === -1) currentIndex = 0;
+
+        if (diffX < 0) {
+            // Svep åt VÄNSTER -> Gå till nästa flik
+            if (currentIndex < TABS_ORDER.length - 1) {
+                const nextTab = TABS_ORDER[currentIndex + 1];
+                switchTabWithButtonUpdate(nextTab);
+            }
+        } else {
+            // Svep åt HÖGER -> Gå till föregående flik
+            if (currentIndex > 0) {
+                const prevTab = TABS_ORDER[currentIndex - 1];
+                switchTabWithButtonUpdate(prevTab);
+            }
+        }
+    }
+}
+
+// Hjälpfunktion för att byta flik och samtidigt uppdatera aktiv-klassen på knappen längst ner
+function switchTabWithButtonUpdate(tabName) {
+    switchTab(tabName);
+
+    // Uppdatera aktiv-markering på navigationsknapparna
+    const buttons = document.querySelectorAll('.tab-btn');
+    buttons.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${tabName}'`)) {
+            btn.classList.add('active');
+        }
+    });
 }
