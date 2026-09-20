@@ -29,6 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
         timeSelect.addEventListener('change', renderYearSummary);
     }
 
+    // Auto-formatera registreringsnummer när användaren lämnar fältet (blur)
+    ['bilRegnr', 'modal-regnr'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('blur', (e) => {
+                e.target.value = formatRegnr(e.target.value);
+            });
+        }
+    });
+
+    // KOPPLA BILFORMULÄRET I MODALEN HÄR:
+    const modalCarForm = document.getElementById('modal-car-form');
+    if (modalCarForm) {
+        modalCarForm.addEventListener('submit', handleCarFormSubmit);
+    }
+
     loadData();
 });
 
@@ -549,7 +565,6 @@ function renderAccordionList(filteredData, calculatedFuelData) {
     });
 }
 
-
 // ----------------------------------------------------
 // FORMULÄRHANTERING OCH TOAST
 // ----------------------------------------------------
@@ -565,7 +580,7 @@ if (carForm) {
         const liter = document.getElementById('liter').value;
         const anteckning = document.getElementById('anteckning').value;
         const formCarSelect = document.getElementById('form-car-select');
-        const carVal = formCarSelect ? formCarSelect.value: '';
+        const carVal = formCarSelect ? formCarSelect.value : '';
 
         if (!editingRowIndex) {
             const isDuplicate = currentData.some(item =>
@@ -785,6 +800,23 @@ function formatKm(val) {
 }
 
 
+// Omvandlar t.ex. "fyd063", "FYD-063" eller "fyd 063" till "FYD 063"
+function formatRegnr(regnr) {
+  if (!regnr) return "";
+  
+  // Ta bort allt som inte är bokstäver eller siffror och gör om till versaler
+  const clean = String(regnr).replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  
+  // Om det är ett standard svenskt regnr (6 tecken), lägg till mellanslag efter 3 tecken
+  if (clean.length === 6) {
+    return `${clean.slice(0, 3)} ${clean.slice(3)}`;
+  }
+  
+  // Om det är ett personligt regnr eller annat format, returnera det rensat i versaler
+  return clean;
+}
+
+
 // ----------------------------------------------------
 // DIAGRAM OCH ACCORDION LOGIK
 // ----------------------------------------------------
@@ -969,11 +1001,14 @@ function renderModalCarsList() {
 }
 
 // Skicka nytt lägg till/uppdatera bil till Apps Script
+// Skicka nytt lägg till/uppdatera bil till Apps Script
 async function handleCarFormSubmit(event) {
     event.preventDefault();
 
     const originalRegnr = document.getElementById('car-edit-original-regnr').value;
-    const regnr = document.getElementById('modal-regnr').value.trim();
+    const rawRegnr = document.getElementById('modal-regnr').value.trim();
+    const regnr = formatRegnr(rawRegnr); // Formaterar till "FYD 063"
+    
     const modell = document.getElementById('modal-modell').value.trim();
     const arsmodell = document.getElementById('modal-arsmodell').value.trim();
     const intervalMil = document.getElementById('modal-interval-mil').value.trim();
@@ -983,7 +1018,7 @@ async function handleCarFormSubmit(event) {
 
     const payload = {
         action,
-        originalRegnr,
+        originalRegnr: formatRegnr(originalRegnr),
         regnr,
         modell,
         arsmodell,
