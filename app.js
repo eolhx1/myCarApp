@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadData();
 });
 
-
 // Hämta data från Google Sheets (Bilar + Loggbok)
 async function loadData() {
     const debugBox = document.getElementById('debug-log');
@@ -64,14 +63,13 @@ async function loadData() {
 
             updateCarDropdowns();
             renderDashboard();
-            initHistoryFilterUI();
-            renderHistory();
+            initHistoryFilterUI(); // Bygger bara upp filterkontrollerna
+            renderHistory();       // Anropas HÄR och enbart EN gång!
         }
     } catch (error) {
         log("FEL VID HÄMTNING: " + error.message);
     }
 }
-
 
 function switchTab(tabName, event) {
     const tabs = document.querySelectorAll('.tab-content');
@@ -357,21 +355,22 @@ function initHistoryFilterUI() {
     if (!container || !carData || carData.length === 0) return;
 
     const years = [...new Set(carData.map(item => new Date(item.datum).getFullYear()))]
-    .filter(y => !isNaN(y))
-    .sort((a, b) => b - a);
+        .filter(y => !isNaN(y))
+        .sort((a, b) => b - a);
 
     let html = '';
     years.forEach(year => {
         html += `
         <label style="display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; color: #334155;">
-        <input type="checkbox" class="filter-year-cb" value="${year}" onchange="handleFilterChange('year')">
-        ${year}
+            <input type="checkbox" class="filter-year-cb" value="${year}" onchange="handleFilterChange('year')">
+            ${year}
         </label>`;
     });
 
     container.innerHTML = html;
-    updateCheckboxStates();
+    updateCheckboxStates(); // Sätter endast text och disabled-status på kryssrutorna
 }
+
 
 function handleFilterChange(changedType) {
     const cb12m = document.getElementById('filter-12m');
@@ -479,9 +478,10 @@ function renderAccordionList(filteredData, calculatedFuelData) {
     const container = document.getElementById('history-accordion-list') || document.getElementById('accordion-list');
     if (!container) return;
 
-    const sortedData = [...filteredData].sort((a, b) => new Date(b.datum || 0) - new Date(a.datum || 0));
-
+    // TÖM CONTAINERN FÖRST!
     container.innerHTML = '';
+
+    const sortedData = [...filteredData].sort((a, b) => new Date(b.datum || 0) - new Date(a.datum || 0));
 
     if (sortedData.length === 0) {
         container.innerHTML = '<em>Inga händelser hittades för vald tidsperiod.</em>';
@@ -512,22 +512,22 @@ function renderAccordionList(filteredData, calculatedFuelData) {
 
         card.innerHTML = `
         <div class="history-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-        <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
-        <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-        <strong style="font-size: 1.05rem; color: var(--primary-color);">${formatKr(totalCost)} kr</strong>
-        <button type="button" class="edit-btn" title="Redigera" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px;">✏️</button>
-        </div>
+            <div>
+                <strong style="font-size: 1rem; color: var(--text-color);">${item.kategori}</strong>
+                <span style="font-size: 0.85em; color: #64748b; margin-left: 6px;">(${formattedDate})</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <strong style="font-size: 1.05rem; color: var(--primary-color);">${formatKr(totalCost)} kr</strong>
+                <button type="button" class="edit-btn" title="Redigera" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px;">✏️</button>
+            </div>
         </div>
 
         <div id="accordion-content-${index}" class="history-card-details" style="display: none;">
-        ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${formatKm(matar)} km</div>`: ''}
-        ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>`: ''}
-        ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${formatKr(amountInput)} kr/L</div>`: ''}
-        ${isFuel ? `<div><strong>Förbrukning:</strong> ${consumptionText}</div>`: ''}
-        ${item.anteckning ? `<div style="margin-top: 4px; color: #64748b;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>`: ''}
+            ${matar > 0 ? `<div><strong>Mätarställning:</strong> ${formatKm(matar)} km</div>`: ''}
+            ${liter > 0 ? `<div><strong>Antal liter:</strong> ${liter} L</div>`: ''}
+            ${isFuel ? `<div><strong>Drivmedelspris:</strong> ${formatKr(amountInput)} kr/L</div>`: ''}
+            ${isFuel ? `<div><strong>Förbrukning:</strong> ${consumptionText}</div>`: ''}
+            ${item.anteckning ? `<div style="margin-top: 4px; color: #64748b;"><strong>Anteckning:</strong> <em>${item.anteckning}</em></div>`: ''}
         </div>
         `;
 
@@ -540,6 +540,7 @@ function renderAccordionList(filteredData, calculatedFuelData) {
         container.appendChild(card);
     });
 }
+
 
 // ----------------------------------------------------
 // FORMULÄRHANTERING OCH TOAST
