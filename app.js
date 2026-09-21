@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const datumInput = document.getElementById('datum');
     if (datumInput) datumInput.valueAsDate = new Date();
 
-    // Koppla händelser för val av bil och tidsperiod
     const globalSelect = document.getElementById('global-car-select');
     if (globalSelect) {
         globalSelect.addEventListener('change', handleCarChange);
@@ -29,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
         timeSelect.addEventListener('change', renderYearSummary);
     }
 
-    // Auto-formatera registreringsnummer när användaren lämnar fältet (blur)
     ['bilRegnr', 'modal-regnr'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
@@ -39,15 +37,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // KOPPLA BILFORMULÄRET I MODALEN HÄR:
     const modalCarForm = document.getElementById('modal-car-form');
     if (modalCarForm) {
         modalCarForm.addEventListener('submit', handleCarFormSubmit);
     }
     
-    // Aktivera svep-navigering
     initSwipeNavigation();
-
     loadData();
 });
 
@@ -99,17 +94,19 @@ function switchTab(tabName, event) {
     const activeTab = document.getElementById(`tab-${tabName}`);
     if (activeTab) activeTab.style.display = 'block';
 
-    if (event && event.currentTarget) event.currentTarget.classList.add('active');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
 
-    // Rita om diagrammen så de anpassar sin storlek
+    // Körs alltid när man hamnar på historikfliken
     if (tabName === 'history') {
         setTimeout(() => {
             if (priceChartInstance) priceChartInstance.resize();
             if (consumptionChartInstance) consumptionChartInstance.resize();
-        },
-            50);
+        }, 50);
     }
 }
+
 
 function toggleFuelInput() {
     const kategori = document.getElementById('kategori').value;
@@ -474,12 +471,19 @@ function renderHistory() {
     const filteredData = getFilteredData();
 
     const fuelEntries = filteredData
-    .map(entry => ({
-        ...entry,
-        pricePerLiter: parseNum(entry.belopp),
-        literNum: parseNum(entry.liter),
-        matarNum: parseNum(entry.korstracka || entry.matarstallning)
-    }))
+    .map(entry => {
+        const rawBelopp = parseNum(entry.belopp);
+        const literNum = parseNum(entry.liter);
+        // Om belopp är totalpris (>50), omvandla till literpris för diagrammet
+        const pricePerLiter = (literNum > 0 && rawBelopp > 50) ? (rawBelopp / literNum) : rawBelopp;
+
+        return {
+            ...entry,
+            pricePerLiter: pricePerLiter,
+            literNum: literNum,
+            matarNum: parseNum(entry.matarstallning || entry.korstracka)
+        };
+    })
     .filter(e => e.kategori === 'Drivmedel' && e.literNum > 0 && e.matarNum > 0 && e.datum)
     .sort((a, b) => new Date(a.datum) - new Date(b.datum));
 
@@ -489,6 +493,7 @@ function renderHistory() {
             const prev = fuelEntries[index - 1];
             const kmDriven = e.matarNum - prev.matarNum;
             if (kmDriven > 0) {
+                // Liter / Mil (dvs kmDriven / 10)
                 consumption = (e.literNum / (kmDriven / 10)).toFixed(2);
             }
         }
@@ -500,8 +505,7 @@ function renderHistory() {
     });
 
     renderCharts(calculatedFuelData);
-    renderAccordionList(filteredData,
-        calculatedFuelData);
+    renderAccordionList(filteredData, calculatedFuelData);
 }
 
 function renderAccordionList(filteredData, calculatedFuelData) {
@@ -572,25 +576,34 @@ function renderAccordionList(filteredData, calculatedFuelData) {
 // FORMULÄRHANTERING OCH TOAST
 // ----------------------------------------------------
 const carForm = document.getElementById('car-form');
-if (carForm) {
+if (carForm && !carForm.dataset.initialized) {
+    carForm.dataset.initialized = "true"; // Förhindrar dubbelregistrering
+
     carForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const datum = document.getElementById('datum').value;
         const matarstallning = document.getElementById('matarstallning').value;
         const kategori = document.getElementById('kategori').value;
-        const belopp = document.getElementById('belopp').value;
-        const liter = document.getElementById('liter').value;
+        const inputBelopp = parseNum(document.getElementById('belopp').value);
+        const inputLiter = parseNum(document.getElementById('liter').value);
         const anteckning = document.getElementById('anteckning').value;
         const formCarSelect = document.getElementById('form-car-select');
         const carVal = formCarSelect ? formCarSelect.value : '';
+
+        // Beräkna literpris om det är drivmedel:
+        // Om användaren mattat in totalbelopp (t.ex. 850 kr) och liter (45 L),
+        // räknar vi ut literpriset (850 / 45 = 18.88 kr/L) som sparas i belopp-fältet.
+        let finalBelopp = inputBelopp;
+        if (kategori === 'Drivmedel' && inputLiter > 0 && inputBelopp > 50) {
+            finalBelopp = (inputBelopp / inputLiter).toFixed(2);
+        }
 
         if (!editingRowIndex) {
             const isDuplicate = currentData.some(item =>
                 formatDate(item.datum) === datum &&
                 String(item.korstracka || item.matarstallning) === String(matarstallning) &&
                 item.kategori === kategori &&
-                String(item.belopp) === String(belopp) &&
                 item.bil === carVal
             );
 
@@ -602,16 +615,17 @@ if (carForm) {
 
         const submitBtn = document.getElementById('submit-btn');
         submitBtn.disabled = true;
-        submitBtn.innerText = editingRowIndex ? "Uppdaterar...": "Sparar...";
+        submitBtn.innerText = editingRowIndex ? "Uppdaterar..." : "Sparar...";
 
         const payload = {
-            action: editingRowIndex ? "UPDATE": "CREATE",
+            action: editingRowIndex ? "UPDATE" : "CREATE",
             rowIndex: editingRowIndex,
             datum,
             matarstallning,
+            korstracka: matarstallning, // Sätter båda så det matchar oavsett vad backend förväntar sig
             kategori,
-            belopp,
-            liter,
+            belopp: finalBelopp,
+            liter: inputLiter,
             anteckning,
             bil: carVal
         };
@@ -625,7 +639,7 @@ if (carForm) {
             const result = await response.json();
 
             if (result.status === 'success') {
-                showToast(editingRowIndex ? "Händelsen har uppdaterats!": "Händelsen har sparats!");
+                showToast(editingRowIndex ? "Händelsen har uppdaterats!" : "Händelsen har sparats!");
                 resetForm();
                 await loadData();
             } else {
@@ -639,6 +653,7 @@ if (carForm) {
         }
     });
 }
+
 
 function showToast(message, isError = false) {
     const toast = document.getElementById('toast');
