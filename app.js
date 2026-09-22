@@ -149,6 +149,13 @@ function formatDate(dateStr) {
 // ----------------------------------------------------
 // CAR MANAGEMENT / FILTRERING
 // ----------------------------------------------------
+// Hjälpfunktion för att slå ihop Märke och Modell snyggt i parentesen
+function getCarDisplayName(car) {
+    const info = [car.marke, car.modell].filter(Boolean).join(' ');
+    return info ? `${car.regnr} (${info})` : car.regnr;
+}
+
+// Uppdatera dropdown-menyer
 function updateCarDropdowns() {
     const globalSelect = document.getElementById('global-car-select');
     const formSelect = document.getElementById('form-car-select');
@@ -156,7 +163,7 @@ function updateCarDropdowns() {
     if (globalSelect) {
         let optionsHtml = `<option value="ALL">Alla bilar</option>`;
         currentCars.forEach(car => {
-            optionsHtml += `<option value="${car.regnr}">${car.regnr} (${car.modell || ''})</option>`;
+            optionsHtml += `<option value="${car.regnr}">${getCarDisplayName(car)}</option>`;
         });
         globalSelect.innerHTML = optionsHtml;
         globalSelect.value = selectedCar;
@@ -165,11 +172,12 @@ function updateCarDropdowns() {
     if (formSelect) {
         let formOptions = '';
         currentCars.forEach(car => {
-            formOptions += `<option value="${car.regnr}">${car.regnr} (${car.modell || ''})</option>`;
+            formOptions += `<option value="${car.regnr}">${getCarDisplayName(car)}</option>`;
         });
         formSelect.innerHTML = formOptions;
     }
 }
+
 
 function handleCarChange() {
     const globalSelect = document.getElementById('global-car-select');
@@ -940,24 +948,27 @@ function renderModalCarsList() {
 
     let html = '';
     currentCars.forEach(car => {
+        const displayName = getCarDisplayName(car);
         html += `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: white; margin-bottom: 6px; border-radius: 4px;">
-        <div>
-        <strong>${car.regnr}</strong> ${car.modell ? `(${car.modell})`: ''}
-        <div style="font-size: 0.8em; color: #64748b;">
-        ${car.arsmodell ? `Årsmodell: ${car.arsmodell}`: ''}
-        ${car.intervalMil ? `| Service: ${car.intervalMil} mil`: ''}
-        </div>
-        </div>
-        <div style="display: flex; gap: 6px;">
-        <button type="button" onclick="editCarInModal('${car.regnr}')" style="background: none; border: none; cursor: pointer; font-size: 1.1rem;">✏️</button>
-        <button type="button" onclick="deleteCarFromModal('${car.regnr}')" style="background: none; border: none; cursor: pointer; font-size: 1.1rem;">🗑️</button>
-        </div>
+            <div>
+                <strong>${displayName}</strong>
+                <div style="font-size: 0.8em; color: #64748b;">
+                    ${car.arsmodell ? `Årsmodell: ${car.arsmodell}` : ''}
+                    ${car.intervalMil ? `| Service: ${car.intervalMil} mil` : ''}
+                    ${car.intervalManader ? `| ${car.intervalManader} mån` : ''}
+                </div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <button type="button" onclick="editCarInModal('${car.regnr}')" style="background: none; border: none; cursor: pointer; font-size: 1.1rem;">✏️</button>
+                <button type="button" onclick="deleteCarFromModal('${car.regnr}')" style="background: none; border: none; cursor: pointer; font-size: 1.1rem;">🗑️</button>
+            </div>
         </div>`;
     });
 
     listContainer.innerHTML = html;
 }
+
 
 async function handleCarFormSubmit(event) {
     event.preventDefault();
@@ -966,17 +977,19 @@ async function handleCarFormSubmit(event) {
     const rawRegnr = document.getElementById('modal-regnr').value.trim();
     const regnr = formatRegnr(rawRegnr);
     
+    const marke = document.getElementById('modal-marke').value.trim();
     const modell = document.getElementById('modal-modell').value.trim();
     const arsmodell = document.getElementById('modal-arsmodell').value.trim();
     const intervalMil = document.getElementById('modal-interval-mil').value.trim();
     const intervalManader = document.getElementById('modal-interval-manader').value.trim();
 
-    const action = originalRegnr ? "UPDATE_CAR": "ADD_CAR";
+    const action = originalRegnr ? "UPDATE_CAR" : "ADD_CAR";
 
     const payload = {
         action,
         originalRegnr: formatRegnr(originalRegnr),
         regnr,
+        marke,
         modell,
         arsmodell,
         intervalMil,
@@ -996,7 +1009,7 @@ async function handleCarFormSubmit(event) {
         const result = await response.json();
 
         if (result.status === 'success') {
-            showToast(originalRegnr ? "Bilen har uppdaterats!": "Bilen har lagts till!");
+            showToast(originalRegnr ? "Bilen har uppdaterats!" : "Bilen har lagts till!");
             resetCarModalForm();
             await loadData();
             renderModalCarsList();
@@ -1012,12 +1025,14 @@ async function handleCarFormSubmit(event) {
     }
 }
 
+
 function editCarInModal(regnr) {
     const car = currentCars.find(c => c.regnr === regnr);
     if (!car) return;
 
     document.getElementById('car-edit-original-regnr').value = car.regnr;
     document.getElementById('modal-regnr').value = car.regnr;
+    document.getElementById('modal-marke').value = car.marke || car.modell || ''; // Bakåtkompatibilitet
     document.getElementById('modal-modell').value = car.modell || '';
     document.getElementById('modal-arsmodell').value = car.arsmodell || '';
     document.getElementById('modal-interval-mil').value = car.intervalMil || '';

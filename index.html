@@ -15,8 +15,8 @@
     <!-- Header med inställningar/kugghjul -->
     <header class="app-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
         <h1 style="margin: 0;">🚗 Bilkoll</h1>
-        <button id="settings-btn" onclick="openCarModal()" title="Hantera bilar" 
-                style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: white; padding: 4px;">
+        <button id="settings-btn" onclick="openCarModal()" title="Hantera bilar"
+            style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: white; padding: 4px;">
             ⚙️
         </button>
     </header>
@@ -116,7 +116,7 @@
 
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button type="submit" id="submit-btn" class="btn-primary" style="flex: 1;">Spara händelse</button>
-                    <button type="button" id="cancel-btn" onclick="resetForm()" style="display:none;" >Avbryt</button>
+                    <button type="button" id="cancel-btn" onclick="resetForm()" style="display:none;">Avbryt</button>
 
                 </div>
             </form>
@@ -176,36 +176,37 @@
     <!-- Modal för hantering av bilar -->
     <div id="car-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
         <div class="modal-content" style="background: white; border-radius: 8px; width: 90%; max-width: 480px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;">
-            
+
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                 <h3 style="margin: 0;">⚙️ Hantera bilar</h3>
                 <button onclick="closeCarModal()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer;">✕</button>
             </div>
 
             <!-- Formulär för att lägga till/redigera bil -->
-            <form id="modal-car-form" onsubmit="handleCarFormSubmit(event)" style="background: #f8fafc; padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                <h4 id="car-form-title" style="margin-top: 0; margin-bottom: 10px;">Lägg till ny bil</h4>
-                <input type="hidden" id="car-edit-original-regnr" value="">
+            <form id="modal-car-form">
+                <input type="hidden" id="car-edit-original-regnr">
+                <h4 id="car-form-title" style="margin-top: 0; margin-bottom: 12px;">Lägg till ny bil</h4>
 
-                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                    <input type="text" id="modal-regnr" placeholder="Regnr/Namn *" required style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    <input type="text" id="modal-modell" placeholder="Märke/Modell" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                </div>
-
-                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                    <input type="number" id="modal-arsmodell" placeholder="Årsmodell" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    <input type="number" id="modal-interval-mil" placeholder="Service (mil)" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                </div>
-
-                <div style="margin-bottom: 10px;">
-                    <input type="number" id="modal-interval-manader" placeholder="Service (månader)" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                <!-- 2x3 Grid Layout -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="modal-regnr" placeholder="Regnr *" required style="width: 100%; box-sizing: border-box; padding: 8px;">
+                    <input type="text" id="modal-marke" placeholder="Märke (t.ex. Nissan)" style="width: 100%; box-sizing: border-box; padding: 8px;">
+                    <input type="text" id="modal-modell" placeholder="Modell (t.ex. Qashqai)" style="width: 100%; box-sizing: border-box; padding: 8px;">
+                    <input type="number" id="modal-arsmodell" placeholder="Årsmodell" style="width: 100%; box-sizing: border-box; padding: 8px;">
+                    <input type="number" id="modal-interval-mil" placeholder="Service (mil)" style="width: 100%; box-sizing: border-box; padding: 8px;">
+                    <input type="number" id="modal-interval-manader" placeholder="Service (månader)" style="width: 100%; box-sizing: border-box; padding: 8px;">
                 </div>
 
                 <div style="display: flex; gap: 8px;">
-                    <button type="submit" id="modal-car-submit-btn" style="flex: 1; background: #2563eb; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer;">Spara bil</button>
-                    <button type="button" id="modal-car-cancel-btn" onclick="resetCarModalForm()" style="display: none; background: #64748b; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer;">Avbryt</button>
+                    <button type="submit" id="modal-car-submit-btn" style="flex: 1; padding: 10px; background-color: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                        Spara bil
+                    </button>
+                    <button type="button" id="modal-car-cancel-btn" onclick="resetCarModalForm()" style="display: none; padding: 10px; background-color: #64748b; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Avbryt
+                    </button>
                 </div>
             </form>
+
 
             <!-- Lista över befintliga bilar -->
             <h4>Registrerade bilar</h4>
@@ -225,8 +226,8 @@
 </body>
 
 
-    
-   <pre id="debug-log" style="background:#1e293b; color:#f8fafc; padding:12px; font-size:11px; max-height:250px; overflow:auto; margin:15px; border-radius:6px;"></pre>
- 
+
+<pre id="debug-log" style="background:#1e293b; color:#f8fafc; padding:12px; font-size:11px; max-height:250px; overflow:auto; margin:15px; border-radius:6px;"></pre>
+
 
 </html>
